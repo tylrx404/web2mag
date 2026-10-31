@@ -1,0 +1,757 @@
+/* ==========================================================================
+   MagazinePreview.css — Static A4 Two-Column Magazine Engine
+   Visual Reference: ENTECH STEM Magazine (September 2026 Editorial Spread)
+   ========================================================================== */
+
+.magazine-preview-container {
+  display: flex;
+  flex-direction: column;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+  width: 100%;
+}
+
+.magazine-preview-container--empty {
+  min-height: 480px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --------------------------------------------------------------------------
+   Top Magazine Preview Toolbar
+   -------------------------------------------------------------------------- */
+.magazine-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  z-index: 10;
+}
+
+.magazine-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.magazine-toolbar__badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1e1b4b;
+  background-color: #e0e7ff;
+  border: 1px solid #c7d2fe;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.magazine-toolbar__pagination-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #4338ca;
+  background-color: #eef2ff;
+  border: 1px solid #c7d2fe;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.magazine-toolbar__meta {
+  font-size: 0.8125rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.magazine-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.magazine-toolbar__btn-group {
+  display: inline-flex;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: #ffffff;
+}
+
+.magazine-toolbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  font-family: inherit;
+  font-size: 0.78125rem;
+  font-weight: 600;
+  color: #475569;
+  background-color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.magazine-toolbar__btn:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.magazine-toolbar__btn--active {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+}
+
+.magazine-toolbar__btn--label {
+  cursor: default;
+  color: #0f172a;
+  min-width: 44px;
+  justify-content: center;
+}
+
+.magazine-toolbar__btn--primary {
+  background-color: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
+  border-radius: 6px;
+}
+
+.magazine-toolbar__btn--primary:hover {
+  background-color: #1e293b;
+  color: #ffffff;
+}
+
+.magazine-toolbar__btn--loading {
+  background-color: #4338ca !important;
+  color: #ffffff !important;
+  cursor: wait !important;
+}
+
+.magazine-toolbar__btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   Viewport & Scalable Canvas
+   -------------------------------------------------------------------------- */
+.magazine-viewport {
+  padding: 24px 16px 40px;
+  overflow-x: auto;
+  overflow-y: visible;
+  display: flex;
+  justify-content: center;
+  background-color: #cbd5e1;
+  background-image: radial-gradient(#94a3b8 0.75px, transparent 0.75px);
+  background-size: 16px 16px;
+  min-height: 820px;
+}
+
+.magazine-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --------------------------------------------------------------------------
+   A4 Magazine Sheet
+   Dimensions: 210mm × 297mm (Standard ISO 216)
+   -------------------------------------------------------------------------- */
+.magazine-sheet {
+  width: 210mm;
+  min-height: 297mm;
+  background-color: #ffffff;
+  box-shadow:
+    0 10px 25px -5px rgba(15, 23, 42, 0.18),
+    0 8px 10px -6px rgba(15, 23, 42, 0.1);
+  box-sizing: border-box;
+  padding: 16mm 18mm 16mm;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  color: #1e293b;
+  font-family: 'Charter', 'Bitstream Charter', 'Sitka Text', 'Cambria', Georgia, serif;
+}
+
+.magazine-sheet--continuation {
+  border-top: 3px solid #4f46e5;
+}
+
+/* --------------------------------------------------------------------------
+   Running Header
+   -------------------------------------------------------------------------- */
+.magazine-header {
+  margin-bottom: 12px;
+}
+
+.magazine-header__top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 8.5pt;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 600;
+  padding-bottom: 5px;
+}
+
+.magazine-header__kicker {
+  color: #4f46e5;
+  font-weight: 700;
+}
+
+.magazine-header__center-title {
+  color: #334155;
+}
+
+.magazine-header__date-vol {
+  color: #64748b;
+}
+
+.magazine-header__rule {
+  height: 2px;
+  background: linear-gradient(90deg, #4f46e5 0%, #312e81 40%, #e2e8f0 100%);
+  margin-top: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Hero / Headline Block
+   -------------------------------------------------------------------------- */
+.magazine-hero-block {
+  margin-bottom: 16px;
+}
+
+.magazine-category-pill {
+  display: inline-block;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 8pt;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background-color: #1e1b4b;
+  padding: 3px 9px;
+  border-radius: 3px;
+  margin-bottom: 8px;
+}
+
+.magazine-headline {
+  margin: 0 0 10px;
+  font-size: 26pt;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+  word-break: break-word;
+}
+
+.magazine-byline-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 8.5pt;
+  color: #475569;
+  padding: 6px 0 10px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.magazine-byline-bar__label {
+  color: #64748b;
+  margin-right: 4px;
+}
+
+.magazine-byline-bar__name {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.magazine-byline-bar__divider {
+  width: 1px;
+  height: 12px;
+  background-color: #cbd5e1;
+}
+
+.magazine-byline-bar__link {
+  color: #4f46e5;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.magazine-byline-bar__link:hover {
+  text-decoration: underline;
+}
+
+/* Standfirst / Lead Summary Box (ENTECH Style) */
+.magazine-standfirst {
+  background-color: #f8fafc;
+  border-left: 4px solid #4f46e5;
+  border-right: 1px solid #e2e8f0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  border-radius: 0 6px 6px 0;
+}
+
+.magazine-standfirst__text {
+  margin: 0;
+  font-size: 11pt;
+  line-height: 1.5;
+  color: #1e293b;
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Featured Hero Image */
+.magazine-featured-figure {
+  margin: 0 0 16px 0;
+  width: 100%;
+}
+
+.magazine-featured-figure__img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  display: block;
+}
+
+.magazine-featured-figure__caption {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 7.5pt;
+  color: #64748b;
+  margin-top: 5px;
+  font-style: italic;
+  text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   Article Body & Symmetric Columns
+   -------------------------------------------------------------------------- */
+.magazine-body {
+  flex: 1;
+}
+
+.magazine-body--two-col {
+  column-count: 2;
+  column-gap: 24px;
+  column-fill: auto;
+  column-rule: 1px solid #edf2f7;
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+  overflow: hidden;
+}
+
+.magazine-body--single-col {
+  max-width: 100%;
+  text-align: left;
+  overflow: hidden;
+}
+
+/* Drop Cap on First Paragraph */
+.magazine-paragraph--lead::first-letter,
+.magazine-body > .magazine-paragraph:first-of-type::first-letter {
+  float: left;
+  font-size: 3.4em;
+  line-height: 0.8;
+  padding-top: 4px;
+  padding-right: 8px;
+  padding-bottom: 2px;
+  font-family: Georgia, serif;
+  font-weight: 700;
+  color: #1e1b4b;
+}
+
+/* Paragraphs */
+.magazine-paragraph {
+  margin: 0 0 10px;
+  font-size: 9.75pt;
+  line-height: 1.58;
+  color: #1e293b;
+  word-break: break-word;
+}
+
+.magazine-paragraph a {
+  color: #3730a3;
+  text-decoration: underline;
+  text-decoration-color: #a5b4fc;
+}
+
+.magazine-paragraph code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 8.5pt;
+  background-color: #f1f5f9;
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: #0f172a;
+}
+
+/* --------------------------------------------------------------------------
+   WYSIWYG Interactive Editing States (Phase 3)
+   -------------------------------------------------------------------------- */
+.magazine-editable-text {
+  transition: background-color 0.12s ease, outline 0.12s ease;
+  border-radius: 3px;
+  cursor: text;
+}
+
+.magazine-editable-text:hover {
+  outline: 1px dashed rgba(79, 70, 229, 0.45);
+  background-color: rgba(238, 242, 255, 0.25);
+}
+
+.magazine-editable-text:focus,
+.magazine-editable-text--active {
+  outline: 2px solid #4f46e5 !important;
+  outline-offset: 2px;
+  background-color: rgba(238, 242, 255, 0.4) !important;
+}
+
+.magazine-editable-figure {
+  position: relative;
+  transition: outline 0.12s ease;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.magazine-editable-figure:hover {
+  outline: 2px dashed rgba(79, 70, 229, 0.5);
+  outline-offset: 2px;
+}
+
+.magazine-editable-figure--active {
+  outline: 2px solid #4f46e5 !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+}
+
+.magazine-editable-box {
+  transition: outline 0.12s ease;
+}
+
+.magazine-editable-box:hover {
+  outline: 1px dashed rgba(79, 70, 229, 0.4);
+}
+
+.magazine-editable-box--active {
+  outline: 2px solid #4f46e5 !important;
+  outline-offset: 2px;
+}
+
+/* Headings within Columns */
+.magazine-heading {
+  margin: 14px 0 6px;
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.25;
+  break-inside: avoid;
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+.magazine-heading--h2 {
+  font-size: 13.5pt;
+  color: #1e1b4b;
+  border-bottom: 1px solid #e0e7ff;
+  padding-bottom: 3px;
+}
+
+.magazine-heading--h3 {
+  font-size: 11pt;
+  color: #334155;
+}
+
+.magazine-heading--h4 {
+  font-size: 10pt;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Inline Figures */
+.magazine-inline-figure {
+  margin: 10px 0 12px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.magazine-inline-figure__img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1px solid #e2e8f0;
+  display: block;
+}
+
+.magazine-inline-figure__caption {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 7.5pt;
+  color: #64748b;
+  margin-top: 4px;
+  font-style: italic;
+  line-height: 1.35;
+}
+
+/* Pull Quotes */
+.magazine-pull-quote {
+  margin: 12px 0 14px;
+  padding: 10px 14px;
+  background-color: #faf5ff;
+  border-left: 3px solid #7c3aed;
+  break-inside: avoid;
+  border-radius: 0 4px 4px 0;
+}
+
+.magazine-pull-quote__text {
+  margin: 0;
+  font-size: 10.5pt;
+  font-style: italic;
+  line-height: 1.45;
+  color: #4c1d95;
+  font-weight: 500;
+}
+
+.magazine-pull-quote__cite {
+  display: block;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 7.5pt;
+  color: #6b21a8;
+  margin-top: 4px;
+  font-style: normal;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Lists */
+.magazine-list {
+  margin: 6px 0 10px;
+  padding-left: 18px;
+  break-inside: avoid;
+}
+
+.magazine-list__item {
+  font-size: 9.5pt;
+  line-height: 1.5;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   Running Footer
+   -------------------------------------------------------------------------- */
+.magazine-footer {
+  margin-top: 14px;
+  padding-top: 8px;
+  border-top: 1px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 8pt;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.magazine-footer__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.magazine-footer__center {
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.magazine-footer__page-num {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0f172a;
+}
+
+.magazine-footer__page-num strong {
+  font-size: 9.5pt;
+  font-weight: 800;
+  color: #1e1b4b;
+}
+
+/* --------------------------------------------------------------------------
+   Empty State Placeholder
+   -------------------------------------------------------------------------- */
+.magazine-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 24px;
+  max-width: 440px;
+}
+
+.magazine-empty-state__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background-color: #e0e7ff;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.magazine-empty-state__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.magazine-empty-state__title {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.magazine-empty-state__desc {
+  margin: 0 0 20px;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #64748b;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.magazine-empty-state__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #4f46e5;
+  border: 1px solid #4338ca;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(79, 70, 229, 0.2);
+  transition: background-color 0.15s ease;
+}
+
+.magazine-empty-state__btn:hover {
+  background-color: #4338ca;
+}
+
+.magazine-empty-state__btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* --------------------------------------------------------------------------
+   Print Media Styles (Direct A4 Print Optimization)
+   -------------------------------------------------------------------------- */
+@media print {
+  body {
+    background: none !important;
+  }
+
+  .app-header,
+  .app-page-header,
+  .app-notice,
+  .app-workspace__sidebar-col,
+  .magazine-toolbar {
+    display: none !important;
+  }
+
+  .app-shell,
+  .app-main,
+  .app-workspace,
+  .app-workspace__details-col,
+  .magazine-preview-container,
+  .magazine-viewport,
+  .magazine-canvas {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    transform: none !important;
+  }
+
+  .magazine-sheet {
+    width: 100% !important;
+    min-height: 100% !important;
+    box-shadow: none !important;
+    padding: 10mm 12mm !important;
+    page-break-after: always;
+    break-after: page;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Hidden Measurement Sandbox (Offscreen calculation)
+   -------------------------------------------------------------------------- */
+.magazine-measurement-sandbox {
+  position: absolute;
+  top: -99999px;
+  left: -99999px;
+  width: 1200px;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -999;
+}
+
+.magazine-measurement-column {
+  font-family: 'Charter', 'Bitstream Charter', 'Sitka Text', 'Cambria', Georgia, serif;
+  color: #1e293b;
+}
+
+/* --------------------------------------------------------------------------
+   Mobile & Tablet Responsiveness
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .magazine-viewport {
+    padding: 16px 8px 24px;
+    justify-content: flex-start;
+  }
+
+  .magazine-sheet {
+    width: 100%;
+    min-width: 320px;
+    padding: 18px 16px;
+  }
+
+  .magazine-headline {
+    font-size: 20pt;
+  }
+
+  .magazine-body--two-col {
+    column-count: 1;
+  }
+}

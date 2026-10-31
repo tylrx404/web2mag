@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import {
-  simulateArticleImport,
   TEST_FAILURE_URL,
+  TEST_PCB_URL,
   TEST_SUCCESS_URL,
+  TEST_WP_NEWS_URL,
   validateArticleUrl,
 } from '../data/mockArticles.js';
 import './ImportArticleModal.css';
@@ -152,11 +153,27 @@ export function ImportArticleModal({ isOpen = true, onClose, onImport }) {
     setIsImporting(true);
 
     try {
-      const importedArticle = await simulateArticleImport(validation.normalizedUrl);
+      const response = await fetch('/api/articles/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: validation.normalizedUrl }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error ||
+            `Article ingestion failed (HTTP ${response.status}). Make sure the Web2Mag backend server is running on port 5001.`
+        );
+      }
+
       if (!isMountedRef.current) return;
 
       resetModalState();
-      onImport?.(importedArticle);
+      onImport?.(data.article);
       onClose?.();
     } catch (err) {
       if (!isMountedRef.current) return;
@@ -164,7 +181,7 @@ export function ImportArticleModal({ isOpen = true, onClose, onImport }) {
       setErrorMessage(
         err instanceof Error
           ? err.message
-          : 'Unable to import article from the provided URL. Please try again.'
+          : 'Unable to import article from the provided URL. Please check the address and server status.'
       );
       inputRef.current?.focus();
     }
@@ -257,9 +274,8 @@ export function ImportArticleModal({ isOpen = true, onClose, onImport }) {
             </div>
 
             <p id={helperId} className="import-modal__helper">
-              Supports standard <code>http://</code> and <code>https://</code>{' '}
-              web addresses. Use <code>{TEST_FAILURE_URL}</code> to test the
-              simulated import failure state.
+              Supports WordPress REST API and semantic web articles. Try the ENTECH
+              magazine articles or test failure handling with <code>{TEST_FAILURE_URL}</code>.
             </p>
 
             {/* Quick-fill test presets for rapid verification */}
@@ -270,16 +286,36 @@ export function ImportArticleModal({ isOpen = true, onClose, onImport }) {
                 className="import-modal__preset-chip"
                 onClick={() => handlePresetSelect(TEST_SUCCESS_URL)}
                 disabled={isImporting}
+                title="ENTECH Magazine: Do you Understand your Code?"
               >
-                Sample valid URL
+                ENTECH: Code
+              </button>
+              <button
+                type="button"
+                className="import-modal__preset-chip"
+                onClick={() => handlePresetSelect(TEST_PCB_URL)}
+                disabled={isImporting}
+                title="ENTECH Magazine: PCB Manufacturing"
+              >
+                ENTECH: PCB
+              </button>
+              <button
+                type="button"
+                className="import-modal__preset-chip"
+                onClick={() => handlePresetSelect(TEST_WP_NEWS_URL)}
+                disabled={isImporting}
+                title="Official WordPress.org News"
+              >
+                WP News
               </button>
               <button
                 type="button"
                 className="import-modal__preset-chip import-modal__preset-chip--error"
                 onClick={() => handlePresetSelect(TEST_FAILURE_URL)}
                 disabled={isImporting}
+                title="Trigger simulated error response"
               >
-                Simulated failure URL
+                Test Error URL
               </button>
             </div>
 

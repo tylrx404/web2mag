@@ -1,0 +1,19 @@
+{
+  "name": "web2mag-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "lint": "node -e \"console.log('No backend lint configured')\"",
+    "test": "node --test test/**/*.test.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "he": "^1.2.0",
+    "puppeteer": "^25.16.0"
+  }
+}

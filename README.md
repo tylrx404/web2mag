@@ -1,165 +1,155 @@
-# Web2Mag — High-Quality Multi-Page Magazine PDF Export & Editorial Workspace
+# Web2Mag — Web-to-PDF Magazine Editor
 
-**Web2Mag** is a modern Web-to-PDF Magazine Layout and Visual Editorial Workspace.
-
-This release completes **Phase 4: PDF Export and Quality Assurance**, uniting Phase 1 article ingestion, Phase 2 automatic A4 pagination, Phase 3 interactive visual editor, and high-fidelity multi-page PDF generation via Puppeteer and Headless Chrome.
+Web2Mag is an editorial publishing platform that transforms web articles (WordPress posts/pages and standard HTML webpages) into publication-grade, A4 multi-column print magazines and vector PDFs.
 
 ---
 
-## 1. Phase 4 Deliverables & Features
-
-### 1. High-Fidelity Multi-Page PDF Export (`pdfExportService.js`)
-- **Puppeteer Headless Chrome Engine**: Employs Headless Chrome directly on the Node.js backend to render complete A4 magazine spreads without converting pages to raster screenshots or canvas bitmaps.
-- **REST API Endpoint (`POST /api/articles/export-pdf`)**:
-  - Accepts pre-rendered client HTML from the visual editor (`{ html, title, columnMode }`), maintaining all custom user text edits, image resizes, alignments, reordered pages, and custom uploaded photos.
-  - Also accepts raw article objects (`{ article, columnMode }`), providing a fully autonomous headless PDF generation path for external services and automation pipelines.
-  - Returns a binary stream (`Content-Type: application/pdf`) with automatic file naming (`Content-Disposition: attachment; filename="...pdf"`).
-
-### 2. Precise Print Configuration & Page Geometry
-- **Standard ISO 216 A4 Dimensions**: Explicitly configured for `210mm × 297mm` (MediaBox: `595 pt × 842 pt`).
-- **CSS Page Breaks**: Preserves CSS page breaks across discrete sheets (`page-break-after: always; break-after: page;`) while preventing blank trailing pages (`.magazine-sheet:last-of-type { break-after: auto; }`).
-- **Zero Print Margin Overrides**: Sets Puppeteer print margins to `0mm` so the pixel-perfect CSS margins and padding (`16mm top/bottom, 18mm left/right`) govern exact layout positioning without double-margin distortion.
-- **Print Backgrounds Enabled**: Background colors, category pills, standfirst summary boxes, blockquote highlights, and dividers render identically (`printBackground: true`, `-webkit-print-color-adjust: exact`).
-- **Clean Browser Suppression**: Disables unwanted browser-generated headers and footers (`displayHeaderFooter: false`) to preserve Web2Mag's running magazine headers and dynamic `Page X of Y` footers.
-
-### 3. Vector Typography vs. Print-Image Resolution (DPI / PPI)
-- **Selectable, Searchable Vector Text**: Text is rendered as native PDF font glyph streams (`/FontDescriptor`, `BT...ET` stream operators). Vector text has **no fixed DPI** and scales with infinite mathematical precision to any printer DPI (600, 1200, 2400 DPI) or digital zoom level.
-- **Image Resolution (300 DPI Print / 150 DPI Digital)**:
-  - Raster images (`<img>`) are preserved at their native pixel dimensions without rasterizing the whole document.
-  - At A4 column width (317px at 96 CSS DPI = 84mm = 3.3 inches), an image requires **~990px** width for 300 DPI print standards, and **~495px** width for 150 DPI digital distribution.
-  - Full-width hero spreads spanning 658px (174mm = 6.85 inches) require **~2055px** width for 300 DPI print and **~1030px** width for 150 DPI digital use.
-- **Font & Asset Preloading**: Generation ensures web fonts (`Inter`, `Playfair Display`, `Source Serif 4`, `JetBrains Mono`) and all inline images (including base64 data URLs) are fully resolved before snapshotting (`document.fonts.ready` and `img.complete`).
-
-### 4. Interactive Frontend Integration
-- **Export PDF Button**: Prominently placed in the Visual Editor toolbar and Reader Preview header.
-- **Real-Time Progress Feedback**: Displays informative statuses ("Preparing publication sheets...", "Generating high-resolution vector PDF...", "Finalizing and downloading...") with spinner animations and disabled states to prevent double-clicks.
-- **Error Handling**: Captures server issues, displays accessible alert notices, and automatically recovers.
-- **Automatic Browser Download**: Downloads the generated PDF as `${slugify(title)}.pdf`.
-
----
-
-## 2. Project Architecture
+## Architecture Overview
 
 ```text
 web2mag/
-├── package.json                   # Root scripts (start:server, start:frontend, test)
-├── .gitignore                     # Repository-wide ignore rules
-├── server/                        # Node.js + Express Backend (Port 5001)
-│   ├── package.json               # Express, Puppeteer, Cheerio, CORS
+├── frontend/                # React 19 + Vite editorial dashboard
 │   ├── src/
-│   │   ├── index.js               # Express application server
-│   │   ├── routes/
-│   │   │   └── articleRoutes.js   # API route declarations (/import, /export-pdf)
-│   │   ├── controllers/
-│   │   │   ├── articleController.js # WP ingestion and Cheerio HTML fallback
-│   │   │   └── pdfController.js     # Orchestrates PDF export requests
-│   │   ├── services/
-│   │   │   ├── pdfExportService.js  # Headless Chrome Puppeteer PDF rendering engine
-│   │   │   ├── wordpressService.js  # WP REST API discovery & post retrieval
-│   │   │   ├── htmlParserService.js # Cheerio DOM cleaner & semantic block extractor
-│   │   │   └── articleNormalizer.js # Standardizes structured article schema & stats
-│   │   └── utils/
-│   │       └── urlHelper.js       # URL validation and slug extraction
-│   └── test/
-│       ├── pdfExport.test.js      # PDF service unit tests (3 tests)
-│       └── qaTestSuite.test.js    # Comprehensive QA test suite (4 tests)
+│   │   ├── components/      # ArticleLibrary, ImportArticleModal, A4MagazinePage, ArticleInspector
+│   │   ├── services/        # articleIngestion client service
+│   │   ├── data/            # mockArticles test data & simulator
+│   │   └── App.jsx          # Three-panel editorial studio dashboard
+│   ├── package.json
+│   └── vite.config.js       # Vite config with /api proxy to backend (port 5001)
 │
-└── frontend/                      # React 19 + Vite Frontend (Port 5173)
-    ├── package.json
-    ├── vite.config.js             # Vite config with /api reverse proxy to Port 5001
-    ├── eslint.config.js
-    ├── index.html
-    └── src/
-        ├── components/
-        │   ├── MagazineEditor.jsx        # WYSIWYG Visual Editor with PDF export
-        │   ├── MagazineEditor.css        # Editor layout, export banners, print rules
-        │   ├── EditorToolbar.jsx         # Text formatting, image controls, Export PDF btn
-        │   ├── EditorToolbar.css         # SaaS toolbar styling, spinners, button states
-        │   ├── PageThumbnailsSidebar.jsx # Mini-A4 thumbnails, reordering, & add page
-        │   ├── PageThumbnailsSidebar.css # Thumbnail cards and active sheet indicators
-        │   ├── DeletePageModal.jsx       # Modal confirmation for page deletion
-        │   ├── DeletePageModal.css       # Modal overlay and dialog animation
-        │   ├── MagazinePage.jsx          # Editable A4 sheet component (contenteditable)
-        │   ├── MagazinePreview.jsx       # Multi-page Reader view with Export PDF btn
-        │   ├── MagazinePreview.css       # A4 dimensions, print styles, and typography
-        │   ├── ArticleLibrary.jsx        # Article Library sidebar
-        │   └── ImportArticleModal.jsx    # Real WP REST API article import dialog
-        ├── hooks/
-        │   └── useArticlePagination.js   # Two-phase layout measurement & overflow hook
-        ├── utils/
-        │   ├── pdfExportClient.js        # Frontend export trigger, progress & download helper
-        │   ├── paginationEngine.js       # Pure A4 pagination algorithms & column logic
-        │   ├── paginationEngine.test.js  # Pagination edge case test suite (7 tests)
-        │   └── editorFeatures.test.js    # Editor state and actions test suite (5 tests)
-        ├── data/
-        │   └── mockArticles.js           # Sample articles & URL normalizers
-        ├── App.jsx                       # Top shell, workspace tabs (Editor/Reader/Details)
-        ├── App.css                       # Global workspace styling & segmented controls
-        ├── index.css                     # Global typography and color tokens
-        └── main.jsx                      # React entry point
+└── server/                  # Node.js + Express article ingestion service
+    ├── src/
+    │   ├── index.js         # Express app entry point
+    │   ├── routes/          # POST /api/articles/import
+    │   ├── services/        # WordPress API, Mozilla Readability, DOMPurify Sanitizer, SSRF Security
+    │   └── utils/           # calculateReadingTime utility
+    ├── test/                # Node.js built-in automated test suite
+    └── package.json
 ```
 
 ---
 
-## 3. Quick Start & Running the Application
+## Quick Start & Running the Application
 
-### Prerequisites
-- **Node.js**: v18.18+ or v20+ (Node v24 tested)
-- **npm**: v9+ (npm v11 tested)
-- **Google Chrome** or **Microsoft Edge** installed on host machine (or Puppeteer bundled Chromium)
+### 1. Backend Ingestion Service (`server/`)
 
-### Step 1: Start Backend Server
+The backend service is required for fetching external web pages and WordPress REST APIs without browser CORS restrictions, and enforces SSRF security and HTML sanitization.
+
 ```bash
+# Navigate to backend directory
 cd server
+
+# Install dependencies (Node 18+ required)
 npm install
+
+# Start the ingestion server (runs on http://localhost:5001)
 npm start
-# Server listens on http://localhost:5001
-```
 
-### Step 2: Start Frontend Application
-```bash
-cd frontend
-npm install
+# Or run in development watch mode
 npm run dev
-# Vite runs on http://localhost:5173 with proxy to backend
-```
 
----
-
-## 4. Quality Assurance & Performance Benchmark Results
-
-Run the full automated test suite (all 19 tests):
-
-```bash
+# Run automated backend test suite (21 unit & integration tests)
 npm test
 ```
 
-### Measured Performance Results
-| Scenario | Pages | Measured Export Time | Output File Size | Verified Quality Attributes |
-|---|---|---|---|---|
-| **Single-Page Article** | 1 Page | **3.28s** | 165.4 KB | Exact A4 (`209.9 × 297.0mm`), vector text streams, Page 1 of 1 |
-| **Typical Feature Article** | 4 Pages | **3.25s** | 481.6 KB | 2-column flow, hero image, Page 1 to 4 sequential footers |
-| **Multiple Images & Base64** | 2 Pages | **3.20s** | 226.6 KB | Hero image + inline figures, no clipping, aspect ratio preserved |
-| **Custom Editor Reordered** | 2 Pages | **3.10s** | 131.7 KB | In-place text edits, reordered sections, custom blank page |
+### 2. Frontend Editorial Studio (`frontend/`)
 
-### Test Summary (19/19 passing)
-- **Backend Tests (7/7)**:
-  - `wrapMagazineInPrintDocument`: HTML5 doctype, A4 portrait size, Google Fonts, print rules.
-  - `renderArticleToHtml`: Multi-page A4 magazine sheets, headers, footers, Page X of Y.
-  - `generatePdfFromHtml`: Vector PDF buffer, `%PDF-` signature, MediaBox dimensions.
-  - `QA Test 1`: Single-page article export.
-  - `QA Test 2`: Typical multi-page article (3–5 pages) performance benchmark (< 4 seconds).
-  - `QA Test 3`: Multiple images & Base64 data URLs.
-  - `QA Test 4`: Custom editor changes, in-place edits, and page reordering.
-- **Frontend Tests (12/12)**:
-  - 7 pagination engine tests (sentence splitting, short articles, long articles, orphan heading prevention, image boundaries, paragraph splitting, list splitting).
-  - 5 interactive editor tests (text editing, image controls, blank page addition, page deletion, page reordering).
-
-### Static Analysis & Production Build
 ```bash
-npm --prefix frontend run lint
-# Result: 0 errors, 0 warnings
+# In a separate terminal, navigate to the frontend directory
+cd frontend
 
-npm --prefix frontend run build
-# Result: Production bundle built successfully in 325ms (dist/assets generated)
+# Install dependencies
+npm install
+
+# Start Vite development server (runs on http://localhost:5173)
+npm run dev
+
+# Run ESLint check
+npm run lint
+
+# Build for production
+npm run build
+
+# Preview production build locally
+npm run preview
 ```
+
+---
+
+## Article Ingestion API
+
+### Endpoint: `POST /api/articles/import`
+
+Ingests an article from a public WordPress REST API or standard HTML webpage.
+
+**Request:**
+```json
+{
+  "url": "https://entechonline.com/pcb-manufacturing-from-design-to-real-product/"
+}
+```
+
+**Response (Normalized Schema):**
+```json
+{
+  "id": "art-1730383123456-a1b2c3",
+  "sourceUrl": "https://entechonline.com/pcb-manufacturing-from-design-to-real-product/",
+  "title": "PCB Manufacturing: From Design to Real Product!",
+  "author": "Virendra Singh Shekhawat",
+  "excerpt": "This article explains the complete journey of PCB manufacturing...",
+  "contentHtml": "<p>Every electronic device relies on PCBs...</p>",
+  "rawText": "Every electronic device relies on PCBs...",
+  "featuredImageUrl": "https://entechonline.com/wp-content/uploads/2026/08/PCB-design-and-manufacturing.jpg",
+  "thumbnail": "https://entechonline.com/wp-content/uploads/2026/08/PCB-design-and-manufacturing.jpg",
+  "images": [
+    "https://entechonline.com/wp-content/uploads/2026/08/PCB-design-and-manufacturing.jpg"
+  ],
+  "publishDate": "2026-09-17T17:34:54",
+  "category": "Issue 9 - September 2026",
+  "readingTime": 5,
+  "status": "Imported",
+  "importedAt": "2026-10-31T18:44:19.123Z",
+  "isWordPress": true,
+  "isPage": false
+}
+```
+
+### Security Features
+- **SSRF Protection**: Rejects `localhost`, private IPv4 (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8`, `169.254.0.0/16`), and private IPv6 addresses after DNS resolution.
+- **Manual Redirect Validation**: Every redirect hop is re-validated against SSRF constraints (up to 5 hops).
+- **Request Limits**: 12-second timeout and 10MB maximum response size.
+- **HTML Sanitization**: DOMPurify strips scripts, iframes, and inline event handlers, enforcing safe links and responsive media.
+
+---
+
+## Automatic Two-Column Pagination Engine
+
+Built directly to match physical A4 magazine dimensions (210mm × 297mm at 96 DPI: 794px × 1123px):
+- **Page 1 Budget**: 755px per column (accounting for 42px top padding, 76px header, 121px headline/byline block, and 36px bottom padding).
+- **Continuation Pages Budget**: 825px per column (accounting for 44px continuation bar).
+- **Two-Column Balancing**: Evaluates height distribution across Column 1 and Column 2 independently before spilling over to the next page sheet.
+- **Anti-Orphan Protection**: Employs `keepWithNext` logic to ensure headings are never stranded at the bottom of a page or column.
+- **Atomic Elements**: Figures and captions remain bound together in `<figure class="a4-figure">`.
+- **Sentence Splitting**: Oversized paragraphs are cleanly split across column and page boundaries at sentence delimiters without dropping words.
+- **Dynamic TOC Synchronization**: Page starting folios in the Table of Contents automatically recompute whenever article order or page length changes.
+
+---
+
+## Magazine Story & Visual Block Editor
+
+An intuitive, non-destructive editorial editor accessible from the top toolbar ("Edit Story"), the Article Inspector ("✍️ Edit Article & Blocks"), or the Article Library:
+- **Metadata Editing**: Title, author, role, author biography, and category.
+- **Block Management**: Add, delete, and reorder paragraphs, headings (H2, H3, H4), blockquotes, lists, and figures.
+- **Media Tools**: Upload images from local disk (FileReader data URI), specify external image URLs, resize images (100%, 85%, 70%, 50%), align images (center, left, right), and edit captions.
+- **Dual Mode**: Toggle between the Visual Block Editor and Raw HTML mode with instant bidirectional synchronization.
+- **Issue Management**: Add blank stories (`+ Story`), reorder articles (`▲`, `▼`), and delete articles.
+
+---
+
+## Vector PDF Export (`POST /api/export/pdf`)
+
+High-fidelity PDF rendering via Node.js and headless Puppeteer:
+- **Vector Typography**: Crisp, selectable text rendered through Skia/PDF.
+- **Standard A4 Dimensions**: Exact `210mm × 297mm` page boxes with zero browser margins (`@page { size: 210mm 297mm; margin: 0; }`).
+- **Complete Publication**: Exports cover, dynamic Table of Contents, paginated article spreads, and contributor author profiles in a single cohesive document.
+- **Robust Media Handling**: Waits for external imagery with a safety timeout so offline or slow remote assets never block publication.

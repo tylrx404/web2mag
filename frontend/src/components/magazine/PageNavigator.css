@@ -1,0 +1,123 @@
+/* PageNavigator.css — Horizontal Page Thumbnails / Page List Navigation Bar */
+
+.page-navigator {
+  background-color: #111827;
+  border-bottom: 1px solid #1f2937;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.page-navigator__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-nav-arrow-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  color: #f1f5f9;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.page-nav-arrow-btn:hover:not(:disabled) {
+  background-color: #0284c7;
+  border-color: #0284c7;
+}
+
+.page-nav-arrow-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.page-navigator__page-count {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.page-navigator__page-count strong {
+  color: #f1f5f9;
+}
+
+/* Horizontal scrollable thumbnails strip */
+.page-navigator__strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 4px;
+  flex: 1;
+  min-width: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+.page-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  color: #cbd5e1;
+  font-family: inherit;
+  font-size: 0.71875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.page-chip:hover {
+  background-color: #334155;
+  color: #ffffff;
+  border-color: #475569;
+}
+
+.page-chip.active {
+  background-color: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(2, 132, 199, 0.4);
+}
+
+.page-chip__num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 800;
+  font-size: 0.6875rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.page-chip__type {
+  font-size: 0.625rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+
+.page-chip__title {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

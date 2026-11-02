@@ -1,59 +1,56 @@
-import cors from 'cors';
 import express from 'express';
-import articleRoutes from './routes/articleRoutes.js';
+import cors from 'cors';
+import { pathToFileURL } from 'node:url';
+import articlesRouter from './routes/articles.js';
+import exportRouter from './routes/exportRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Middleware
-app.use(
-  cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Middlewares
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
 
-// Health Check
+// Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.status(200).json({
+  res.json({
     status: 'ok',
-    service: 'web2mag-server',
+    service: 'web2mag-article-ingester',
     timestamp: new Date().toISOString(),
   });
 });
 
-// Article Routes
-app.use('/api/articles', articleRoutes);
+// Article import endpoints
+app.use('/api/articles', articlesRouter);
 
-// PDF Export direct alias route
-app.post('/api/pdf/export', (req, res, next) => {
-  req.url = '/export-pdf';
-  articleRoutes(req, res, next);
-});
+// Magazine PDF export endpoints
+app.use('/api/export', exportRouter);
 
-// 404 Handler for undefined routes
+// Fallback 404 handler
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: `API route not found: ${req.method} ${req.url}`,
-  });
+  res.status(404).json({ error: `Route not found: ${req.method} ${req.originalUrl}` });
 });
 
-// Global Error Handler
-app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
-  console.error('[Server Error]', err);
-  res.status(500).json({
-    success: false,
-    error: err.message || 'Internal server error',
-  });
+// Error handling middleware
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => {
+  console.error('[Web2Mag Server Error]:', err);
+  if (err.type === 'entity.too.large' || err.status === 413) {
+    return res.status(413).json({
+      error: 'Export payload exceeds maximum allowable limit of 10MB. Reduce image sizes or split issues.',
+    });
+  }
+  const statusCode = err.status || err.statusCode || 500;
+  const message = err.message || 'Internal server error processing request.';
+  res.status(statusCode).json({ error: message });
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`[Web2Mag Server] Running on http://localhost:${PORT}`);
-});
+// Start listening only if executed directly (e.g. node src/index.js), not when imported by tests
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isMain) {
+  app.listen(PORT, () => {
+    console.log(`[Web2Mag Server] Ingestion service running at http://localhost:${PORT}`);
+  });
+}
 
 export default app;

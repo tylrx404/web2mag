@@ -2,35 +2,18 @@ import { useState } from 'react';
 import './ArticleLibrary.css';
 
 /**
- * Maps an article status string to a semantic modifier class.
- * @param {string} status
- * @returns {string}
- */
-function getStatusModifier(status) {
-  const normalized = (status || '').toLowerCase().trim();
-  if (normalized === 'ready') return 'article-card__status--ready';
-  if (normalized === 'imported') return 'article-card__status--imported';
-  if (normalized === 'needs review' || normalized === 'review') {
-    return 'article-card__status--review';
-  }
-  return 'article-card__status--default';
-}
-
-/**
- * Renders an article thumbnail with an automatic styled fallback placeholder
- * when the image URL is empty or fails to load. Never displays a broken-image icon.
+ * Thumbnail component with fallback handling for missing or broken image URLs.
  */
 function ArticleThumbnail({ src, title }) {
   const [failedSrc, setFailedSrc] = useState(null);
   const trimmedSrc = typeof src === 'string' ? src.trim() : '';
-  const shouldShowImage = Boolean(trimmedSrc) && failedSrc !== trimmedSrc;
+  const isFailed = failedSrc !== null && failedSrc === trimmedSrc;
 
-  if (!shouldShowImage) {
+  if (!trimmedSrc || isFailed) {
     return (
       <div
         className="article-card__thumb-placeholder"
-         role="img"
-        aria-label={`No thumbnail available for ${title}`}
+        aria-label={`Placeholder for ${title}`}
       >
         <svg
           className="article-card__placeholder-icon"
@@ -42,10 +25,9 @@ function ArticleThumbnail({ src, title }) {
           strokeLinejoin="round"
           aria-hidden="true"
         >
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="8" y1="13" x2="16" y2="13" />
-          <line x1="8" y1="17" x2="13" y2="17" />
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
         </svg>
         <span className="article-card__placeholder-label">No Image</span>
       </div>
@@ -65,8 +47,8 @@ function ArticleThumbnail({ src, title }) {
 
 /**
  * Reusable Article Library Sidebar component.
- * Displays the collection of imported articles, supports selection and removal,
- * handles missing/broken thumbnails, and renders an empty state when no articles exist.
+ * Displays the collection of imported articles, supports selection, reordering,
+ * editing, creation of blank stories, and removal.
  *
  * @param {{
  *   articles: Array<{
@@ -80,7 +62,10 @@ function ArticleThumbnail({ src, title }) {
  *   selectedArticleId: string | null,
  *   onSelectArticle: (id: string) => void,
  *   onRemoveArticle: (id: string) => void,
- *   onImportClick: () => void
+ *   onImportClick: () => void,
+ *   onMoveArticle?: (id: string, direction: 'up' | 'down') => void,
+ *   onEditArticle?: (article: object) => void,
+ *   onCreateArticle?: () => void
  * }} props
  */
 export function ArticleLibrary({
@@ -89,9 +74,27 @@ export function ArticleLibrary({
   onSelectArticle,
   onRemoveArticle,
   onImportClick,
+  onMoveArticle,
+  onEditArticle,
+  onCreateArticle,
 }) {
   const count = articles.length;
   const countText = `${count} ${count === 1 ? 'article' : 'articles'}`;
+
+  const getStatusModifier = (status) => {
+    switch ((status || '').toLowerCase()) {
+      case 'ready':
+        return 'article-card__status--ready';
+      case 'edited':
+        return 'article-card__status--ready';
+      case 'imported':
+        return 'article-card__status--imported';
+      case 'needs review':
+        return 'article-card__status--review';
+      default:
+        return 'article-card__status--default';
+    }
+  };
 
   return (
     <aside className="article-library" aria-label="Article Library">
@@ -108,42 +111,56 @@ export function ArticleLibrary({
             </span>
           </div>
           <p className="article-library__subtitle">
-            Select an article to inspect or manage issue content
+            Select an article to inspect, reorder, edit, or paginate
           </p>
         </div>
 
-        <button
-          type="button"
-          className="article-library__import-btn"
-          onClick={onImportClick}
-        >
-          <svg
-            className="article-library__btn-icon"
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+        <div className="article-library__header-actions">
+          <button
+            type="button"
+            className="article-library__import-btn"
+            onClick={onImportClick}
+            title="Import an article from web URL or WordPress"
           >
-            <line x1="10" y1="4" x2="10" y2="16" />
-            <line x1="4" y1="10" x2="16" y2="10" />
-          </svg>
-          <span>Import Article</span>
-        </button>
+            <svg
+              className="article-library__btn-icon"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="10" y1="4" x2="10" y2="16" />
+              <line x1="4" y1="10" x2="16" y2="10" />
+            </svg>
+            <span>Import</span>
+          </button>
+
+          {onCreateArticle && (
+            <button
+              type="button"
+              className="article-library__new-btn"
+              onClick={onCreateArticle}
+              title="Create a new blank article story in this issue"
+            >
+              <span>+ Story</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Article List or Empty State */}
       <div className="article-library__body">
         {count === 0 ? (
           <div className="article-library__empty">
-            <div className="article-library__empty-illustration" aria-hidden="true">
+            <div className="article-library__empty-icon" aria-hidden="true">
               <svg
                 viewBox="0 0 48 48"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="1.75"
+                strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
@@ -157,8 +174,7 @@ export function ArticleLibrary({
               No articles imported yet
             </h3>
             <p className="article-library__empty-desc">
-              Import web articles by URL to build your issue library and prepare
-              editorial content for magazine layout.
+              Import web articles by URL or add a new story to build your issue library.
             </p>
             <button
               type="button"
@@ -183,7 +199,7 @@ export function ArticleLibrary({
           </div>
         ) : (
           <ul className="article-library__list" role="list">
-            {articles.map((article) => {
+            {articles.map((article, idx) => {
               const isSelected = article.id === selectedArticleId;
               const statusLabel = article.status || 'Imported';
 
@@ -243,8 +259,68 @@ export function ArticleLibrary({
                       </div>
                     </div>
 
-                    {/* Remove Action */}
+                    {/* Actions: Reorder, Edit, Remove */}
                     <div className="article-card__actions">
+                      {onMoveArticle && (
+                        <div className="article-card__order-group">
+                          <button
+                            type="button"
+                            className="article-card__order-btn"
+                            disabled={idx === 0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onMoveArticle(article.id, 'up');
+                            }}
+                            title="Move article earlier in issue"
+                            aria-label="Move Up"
+                          >
+                            ▲
+                          </button>
+                          <button
+                            type="button"
+                            className="article-card__order-btn"
+                            disabled={idx === articles.length - 1}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onMoveArticle(article.id, 'down');
+                            }}
+                            title="Move article later in issue"
+                            aria-label="Move Down"
+                          >
+                            ▼
+                          </button>
+                        </div>
+                      )}
+
+                      {onEditArticle && (
+                        <button
+                          type="button"
+                          className="article-card__edit-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditArticle(article);
+                          }}
+                          title="Edit article text, images and blocks"
+                          aria-label="Edit Article"
+                        >
+                          <svg
+                            width="13"
+                            height="13"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                          <span>Edit</span>
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         className="article-card__remove-btn"
@@ -270,7 +346,6 @@ export function ArticleLibrary({
                           <line x1="8.5" y1="9.5" x2="8.5" y2="14" />
                           <line x1="11.5" y1="9.5" x2="11.5" y2="14" />
                         </svg>
-                        <span className="article-card__remove-label">Remove</span>
                       </button>
                     </div>
                   </div>

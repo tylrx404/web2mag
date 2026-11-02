@@ -1,0 +1,282 @@
+/* CoverPage.css — High-Impact A4 Magazine Cover Layout (ENTECH Reference) */
+
+.a4-cover-page {
+  width: 794px;
+  min-height: 1123px;
+  height: 1123px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  color: #0f172a;
+  padding: 38px 46px 34px 46px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.35), 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+@media print {
+  .a4-cover-page {
+    width: 210mm;
+    height: 297mm;
+    min-height: 297mm;
+    box-shadow: none;
+    margin: 0;
+    padding: 16mm 18mm 14mm 18mm;
+    page-break-after: always;
+  }
+}
+
+/* 1. TOP HEADER & METADATA BAR */
+.cover-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.cover-header__top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #475569;
+}
+
+.cover-header__edition {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cover-header__dot {
+  color: #94a3b8;
+}
+
+.cover-header__web {
+  color: #0284c7;
+  font-weight: 700;
+}
+
+/* 2. PROMINENT ENTECH MASTHEAD */
+.cover-masthead {
+  padding: 6px 0 12px 0;
+  border-bottom: 3px solid #0f172a;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cover-masthead__brand {
+  margin: 0;
+  font-size: 54px;
+  font-weight: 900;
+  line-height: 1;
+  color: #0f172a;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+
+.cover-masthead__sub {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-align: right;
+}
+
+.cover-issn-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 9.5px;
+  color: #64748b;
+}
+
+.cover-issn-bar__text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.cover-issn-bar__pill {
+  background-color: #0284c7;
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-weight: 800;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* 3. HERO COVER STORY & FEATURED IMAGE */
+.cover-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 14px 0;
+}
+
+.cover-hero-card {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 380px;
+  border: 1px solid #cbd5e1;
+  background-color: #0f172a;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.cover-hero-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cover-hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.1) 0%, rgba(15, 23, 42, 0.88) 85%);
+  pointer-events: none;
+}
+
+.cover-hero-content {
+  position: relative;
+  z-index: 2;
+  padding: 22px 24px;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cover-hero-badge {
+  align-self: flex-start;
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+  background-color: #0284c7;
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+
+.cover-hero-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.cover-hero-subhead {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #e2e8f0;
+  max-width: 580px;
+}
+
+/* 4. FEATURED STORIES CALLOUT GRID */
+.cover-stories-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cover-stories-heading {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cover-stories-heading::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: #e2e8f0;
+}
+
+.cover-stories-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.cover-story-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #0284c7;
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.cover-story-card__category {
+  font-size: 8.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #0369a1;
+}
+
+.cover-story-card__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #0f172a;
+}
+
+.cover-story-card__author {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* 5. COVER FOOTER */
+.cover-footer {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9.5px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.cover-footer__publisher {
+  font-weight: 700;
+  color: #0f172a;
+}

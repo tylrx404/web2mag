@@ -1,19 +1,23 @@
 {
   "name": "web2mag-server",
   "version": "1.0.0",
-  "private": true,
+  "description": "Web2Mag Article Ingestion and Pre-processing Server",
   "type": "module",
+  "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "lint": "node -e \"console.log('No backend lint configured')\"",
-    "test": "node --test test/**/*.test.js"
+    "test": "node --test test/**/*.test.js",
+    "test:e2e": "node test/e2eBrowser.js"
   },
   "dependencies": {
+    "@mozilla/readability": "^0.5.0",
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
+    "dompurify": "^3.2.4",
     "express": "^4.21.2",
-    "he": "^1.2.0",
+    "jsdom": "^26.0.0",
+    "pdf-parse": "^2.4.5",
     "puppeteer": "^25.16.0"
   }
 }

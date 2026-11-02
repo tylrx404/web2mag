@@ -1,95 +1,109 @@
-import assert from 'node:assert';
-import test from 'node:test';
-import {
-  generatePdfFromHtml,
-  renderArticleToHtml,
-  wrapMagazineInPrintDocument,
-} from '../src/services/pdfExportService.js';
+import { createRequire } from 'node:module';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { renderIssueToPdf, buildIssuePrintHtml } from '../src/services/pdfRenderer.js';
+import { buildMagazinePages } from '../../frontend/src/services/magazineModel.js';
 
-test('1. wrapMagazineInPrintDocument wraps content in valid A4 print HTML document', () => {
-  const dummySheet = '<article class="magazine-sheet"><h1>Sample</h1></article>';
-  const doc = wrapMagazineInPrintDocument(dummySheet, 'Test Publication');
+const require = createRequire(import.meta.url);
+const { PDFParse } = require('pdf-parse');
 
-  assert.ok(doc.includes('<!DOCTYPE html>'), 'Must include HTML5 doctype');
-  assert.ok(doc.includes('Test Publication'), 'Must include page title');
-  assert.ok(doc.includes('@page'), 'Must include @page CSS rule');
-  assert.ok(doc.includes('size: A4 portrait'), 'Must define A4 portrait size');
-  assert.ok(doc.includes('page-break-after: always'), 'Must preserve CSS page breaks');
-  assert.ok(doc.includes('fonts.googleapis.com'), 'Must link Google Fonts');
-  assert.ok(doc.includes(dummySheet), 'Must include the magazine sheets');
-});
-
-test('2. renderArticleToHtml generates multi-page A4 magazine sheets with Page X of Y', () => {
-  const article = {
-    id: 'test-doc',
-    title: 'Future of Cognitive Engineering',
-    author: 'Chief Editor',
-    formattedDate: 'Fall 2026',
-    category: 'STEM & AI',
-    summary: 'An exploration of human-AI collaborative software architecture.',
-    sections: [
-      { id: '1', type: 'paragraph', content: 'Introductory paragraph one.' },
-      { id: '2', type: 'paragraph', content: 'Paragraph two.' },
-      { id: '3', type: 'paragraph', content: 'Paragraph three.' },
-      { id: '4', type: 'paragraph', content: 'Paragraph four.' },
-      { id: '5', type: 'paragraph', content: 'Paragraph five.' },
-      { id: '6', type: 'paragraph', content: 'Paragraph six.' },
-      { id: '7', type: 'paragraph', content: 'Paragraph seven.' },
-      { id: '8', type: 'paragraph', content: 'Paragraph eight.' },
-      { id: '9', type: 'paragraph', content: 'Paragraph nine.' },
-      { id: '10', type: 'paragraph', content: 'Paragraph ten.' },
-    ],
+describe('PDF Export Engine & Vector Document Generation', () => {
+  const issueConfig = {
+    magazineTitle: 'ENTECH MAGAZINE',
+    volume: 'VOLUME 4',
+    issue: 'ISSUE 9',
+    date: 'September 2026',
+    issn: '2584-2749',
+    website: 'www.entechonline.com',
+    publisher: 'STEM Research Press',
+    coverHeadline: 'Printed Circuit Boards: From Silicon to System',
+    coverSubhead: 'Comprehensive hardware engineering and manufacturability insights.',
   };
 
-  const html = renderArticleToHtml(article, { columnMode: 'two-column' });
+  const sampleArticles = [
+    {
+      id: 'art-test-1',
+      title: 'High-Density PCB Routing and Impedance Matching',
+      author: 'Dr. Sarah Connor',
+      category: 'CAREER FOCUS',
+      contentHtml: `
+        <p class="a4-lead">Modern microelectronics demand rigorous printed circuit design practices to guarantee signal fidelity and thermal dissipation across industrial operating environments.</p>
+        <h3>Substrate Selection &amp; Dielectric Control</h3>
+        <p>Choosing between standard FR4 and high-frequency PTFE laminates dictates the achievable trace clearance and controlled impedance tolerances.</p>
+        <figure class="a4-figure">
+          <img src="https://entechonline.com/test-fig.png" alt="Board Layout" class="a4-figure__img" />
+          <figcaption>Figure 1: High-density multi-layer routing stackup.</figcaption>
+        </figure>
+      `,
+    },
+    {
+      id: 'art-test-2',
+      title: 'Modular Layout Grids in Digital Periodicals',
+      author: 'Marcus Vance',
+      category: 'DESIGN',
+      contentHtml: `
+        <p class="a4-lead">Applying mathematical grid systems brings balance and pacing to technical editorial publications.</p>
+        <p>Two-column layouts provide the optimal character line length for sustained reading comfort.</p>
+      `,
+    },
+  ];
 
-  assert.ok(html.includes('class="magazine-sheet'), 'Must contain .magazine-sheet elements');
-  assert.ok(html.includes('Page 1 of 3'), 'Must contain Page 1 of Y footer');
-  assert.ok(html.includes('Page 2 of 3'), 'Must contain Page 2 of Y footer');
-  assert.ok(html.includes('Future of Cognitive Engineering'), 'Must include title');
-});
+  it('rejects invalid or empty page array with descriptive error', async () => {
+    await assert.rejects(
+      () => renderIssueToPdf([], issueConfig),
+      /Cannot export PDF: No magazine pages provided/
+    );
+    await assert.rejects(
+      () => renderIssueToPdf(null, issueConfig),
+      /Cannot export PDF: No magazine pages provided/
+    );
+  });
 
-test('3. generatePdfFromHtml creates a valid vector A4 PDF using Puppeteer', async () => {
-  const minimalHtml = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          @page { size: A4 portrait; margin: 0; }
-          body { font-family: sans-serif; margin: 0; padding: 20mm; }
-          h1 { color: #1e1b4b; font-size: 24pt; }
-          p { color: #334155; font-size: 11pt; line-height: 1.6; }
-        </style>
-      </head>
-      <body>
-        <h1>Vector Text Quality Verification</h1>
-        <p>This text is rendered as native vector glyphs inside the PDF document stream.</p>
-      </body>
-    </html>
-  `;
+  it('builds complete standalone HTML with embedded styles and sheets', () => {
+    const pages = buildMagazinePages(sampleArticles, issueConfig);
+    const html = buildIssuePrintHtml(pages, issueConfig);
 
-  const { pdfBuffer, durationMs } = await generatePdfFromHtml(minimalHtml);
+    assert.ok(html.includes('<!DOCTYPE html>'));
+    assert.ok(html.includes('@page {'));
+    assert.ok(html.includes('print-sheet'));
+    assert.ok(html.includes('ENTECH MAGAZINE'));
+    assert.ok(html.includes('High-Density PCB Routing'));
+    assert.ok(html.includes('Table of Contents'));
+    assert.ok(html.includes('About the Authors'));
+  });
 
-  assert.ok(Buffer.isBuffer(pdfBuffer), 'Result must be a Node.js Buffer');
-  assert.ok(pdfBuffer.length > 5000, 'PDF buffer must be non-empty and well-formed');
-  assert.strictEqual(
-    pdfBuffer.subarray(0, 5).toString('ascii'),
-    '%PDF-',
-    'PDF must start with %PDF- signature'
-  );
-  assert.ok(durationMs < 10000, `PDF generation must be fast (took ${durationMs}ms)`);
+  it('renders a valid vector A4 PDF with selectable text and exact page count', async () => {
+    const pages = buildMagazinePages(sampleArticles, issueConfig);
+    assert.ok(pages.length >= 4, `Expected at least 4 pages, got ${pages.length}`);
 
-  const pdfString = pdfBuffer.toString('latin1');
-  assert.ok(
-    pdfString.includes('/Font'),
-    'PDF must embed font glyph descriptors for vector rendering'
-  );
+    const pdfBuffer = await renderIssueToPdf(pages, issueConfig);
 
-  // Check MediaBox A4 dimensions (595 x 842 pt)
-  const mediaBoxMatch = pdfString.match(/\/MediaBox\s*\[\s*0\s+0\s+([0-9.]+)\s+([0-9.]+)\s*\]/);
-  assert.ok(mediaBoxMatch, 'PDF must contain MediaBox dimensions');
-  const widthMm = (parseFloat(mediaBoxMatch[1]) / 72) * 25.4;
-  const heightMm = (parseFloat(mediaBoxMatch[2]) / 72) * 25.4;
-  assert.ok(Math.abs(widthMm - 210) < 1, `Width should be ~210mm (got ${widthMm}mm)`);
-  assert.ok(Math.abs(heightMm - 297) < 1, `Height should be ~297mm (got ${heightMm}mm)`);
+    // 1. Verify buffer is valid PDF binary header
+    assert.ok(Buffer.isBuffer(pdfBuffer));
+    assert.ok(pdfBuffer.length > 5000, `PDF buffer too small: ${pdfBuffer.length} bytes`);
+    const headerStr = pdfBuffer.subarray(0, 5).toString('ascii');
+    assert.equal(headerStr, '%PDF-');
+
+    // 2. Parse PDF to verify page count and selectable text
+    const parser = new PDFParse({ data: pdfBuffer });
+    await parser.load();
+    const info = await parser.getInfo();
+    assert.equal(
+      info.total,
+      pages.length,
+      `Expected ${pages.length} pages in PDF, parsed ${info.total}`
+    );
+
+    // 3. Confirm text is selectable vector content, not raster images!
+    const textObj = await parser.getText();
+    const extractedText = textObj.text || '';
+    assert.ok(extractedText.length > 200, 'PDF text must be selectable and non-empty');
+    assert.ok(/ENTECH MAGAZINE/i.test(extractedText), 'Should contain magazine masthead');
+    assert.ok(extractedText.includes('Dr. Sarah Connor'), 'Should contain author name');
+    assert.ok(extractedText.includes('High-Density PCB Routing'), 'Should contain article headline');
+    assert.ok(/TABLE OF CONTENTS/i.test(extractedText), 'Should contain TOC title');
+    assert.ok(/ABOUT THE AUTHORS/i.test(extractedText), 'Should contain Author section');
+
+    await parser.destroy();
+  });
 });

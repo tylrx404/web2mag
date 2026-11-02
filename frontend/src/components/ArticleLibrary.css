@@ -475,3 +475,88 @@
     padding: 6px;
   }
 }
+
+
+/* Header Actions & New Story Button */
+.article-library__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.article-library__new-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #0284c7;
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.article-library__new-btn:hover {
+  background-color: #0284c7;
+  color: #ffffff;
+}
+
+/* Card Order Buttons & Edit Button */
+.article-card__order-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: 4px;
+}
+
+.article-card__order-btn {
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  width: 20px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+}
+
+.article-card__order-btn:hover:not(:disabled) {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.article-card__order-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.article-card__edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 9px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #0284c7;
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-right: 4px;
+}
+
+.article-card__edit-btn:hover {
+  background-color: #0284c7;
+  color: #ffffff;
+}

@@ -1,17 +1,21 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import {
   TEST_FAILURE_URL,
-  TEST_PCB_URL,
   TEST_SUCCESS_URL,
-  TEST_WP_NEWS_URL,
   validateArticleUrl,
 } from '../data/mockArticles.js';
+import { ingestArticle } from '../services/articleIngestion.js';
 import './ImportArticleModal.css';
+
+const ENTECH_ARTICLE_URL =
+  'https://entechonline.com/pcb-manufacturing-from-design-to-real-product/';
+const ENTECH_ISSUE_URL =
+  'https://entechonline.com/september-2026-volume-4-issue-9/';
 
 /**
  * Reusable Import Article Modal component.
- * Validates HTTP/HTTPS article URLs using the native URL constructor and simulates
- * an asynchronous article import with loading, success, and error states.
+ * Validates HTTP/HTTPS article URLs and ingests content via the Web2Mag backend service
+ * or deterministic local mock simulator.
  *
  * @param {{
  *   isOpen?: boolean,
@@ -19,10 +23,16 @@ import './ImportArticleModal.css';
  *   onImport: (article: {
  *     id: string,
  *     title: string,
- *     author: string,
- *     thumbnail: string,
+ *     author?: string,
+ *     category?: string,
+ *     thumbnail?: string,
+ *     featuredImageUrl?: string,
+ *     contentHtml?: string,
+ *     rawText?: string,
  *     sourceUrl: string,
- *     status: string
+ *     status: string,
+ *     publishDate?: string,
+ *     readingTime?: number
  *   }) => void
  * }} props
  */
@@ -153,27 +163,11 @@ export function ImportArticleModal({ isOpen = true, onClose, onImport }) {
     setIsImporting(true);
 
     try {
-      const response = await fetch('/api/articles/import', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: validation.normalizedUrl }),
-      });
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.error ||
-            `Article ingestion failed (HTTP ${response.status}). Make sure the Web2Mag backend server is running on port 5001.`
-        );
-      }
-
+      const importedArticle = await ingestArticle(validation.normalizedUrl);
       if (!isMountedRef.current) return;
 
       resetModalState();
-      onImport?.(data.article);
+      onImport?.(importedArticle);
       onClose?.();
     } catch (err) {
       if (!isMountedRef.current) return;
@@ -181,7 +175,7 @@ export function ImportArticleModal({ isOpen = true, onClose, onImport }) {
       setErrorMessage(
         err instanceof Error
           ? err.message
-          : 'Unable to import article from the provided URL. Please check the address and server status.'
+          : 'Unable to import article from the provided URL. Please try again.'
       );
       inputRef.current?.focus();
     }
@@ -212,8 +206,8 @@ export function ImportArticleModal({ isOpen = true, onClose, onImport }) {
               Import Article
             </h2>
             <p id={descId} className="import-modal__description">
-              Enter a public HTTP or HTTPS article URL to extract its title,
-              author, and thumbnail into your magazine library.
+              Enter a public WordPress or standard webpage article URL to ingest its title,
+              author, cover media, and formatted content into your magazine library.
             </p>
           </div>
 
@@ -274,8 +268,7 @@ export function ImportArticleModal({ isOpen = true, onClose, onImport }) {
             </div>
 
             <p id={helperId} className="import-modal__helper">
-              Supports WordPress REST API and semantic web articles. Try the ENTECH
-              magazine articles or test failure handling with <code>{TEST_FAILURE_URL}</code>.
+              Supports WordPress REST API and standard HTML articles (HTTP/HTTPS).
             </p>
 
             {/* Quick-fill test presets for rapid verification */}
@@ -284,38 +277,34 @@ export function ImportArticleModal({ isOpen = true, onClose, onImport }) {
               <button
                 type="button"
                 className="import-modal__preset-chip"
+                onClick={() => handlePresetSelect(ENTECH_ARTICLE_URL)}
+                disabled={isImporting}
+              >
+                Real ENTECH Article
+              </button>
+              <button
+                type="button"
+                className="import-modal__preset-chip"
+                onClick={() => handlePresetSelect(ENTECH_ISSUE_URL)}
+                disabled={isImporting}
+              >
+                ENTECH Issue URL
+              </button>
+              <button
+                type="button"
+                className="import-modal__preset-chip"
                 onClick={() => handlePresetSelect(TEST_SUCCESS_URL)}
                 disabled={isImporting}
-                title="ENTECH Magazine: Do you Understand your Code?"
               >
-                ENTECH: Code
-              </button>
-              <button
-                type="button"
-                className="import-modal__preset-chip"
-                onClick={() => handlePresetSelect(TEST_PCB_URL)}
-                disabled={isImporting}
-                title="ENTECH Magazine: PCB Manufacturing"
-              >
-                ENTECH: PCB
-              </button>
-              <button
-                type="button"
-                className="import-modal__preset-chip"
-                onClick={() => handlePresetSelect(TEST_WP_NEWS_URL)}
-                disabled={isImporting}
-                title="Official WordPress.org News"
-              >
-                WP News
+                Mock Valid URL
               </button>
               <button
                 type="button"
                 className="import-modal__preset-chip import-modal__preset-chip--error"
                 onClick={() => handlePresetSelect(TEST_FAILURE_URL)}
                 disabled={isImporting}
-                title="Trigger simulated error response"
               >
-                Test Error URL
+                Simulated Failure URL
               </button>
             </div>
 
@@ -356,7 +345,7 @@ export function ImportArticleModal({ isOpen = true, onClose, onImport }) {
                   className="import-modal__spinner"
                   aria-hidden="true"
                 />
-                <span>Importing article...</span>
+                <span>Ingesting and sanitizing article content...</span>
               </div>
             )}
           </div>
@@ -383,7 +372,7 @@ export function ImportArticleModal({ isOpen = true, onClose, onImport }) {
                     className="import-modal__spinner import-modal__spinner--light"
                     aria-hidden="true"
                   />
-                  <span>Importing article...</span>
+                  <span>Importing...</span>
                 </>
               ) : (
                 <span>Import</span>

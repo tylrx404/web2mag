@@ -1,46 +1,123 @@
-import { useRef, useState } from 'react';
-import { COLUMN_WIDTH_PX, useArticlePagination } from '../hooks/useArticlePagination.js';
+import { useEffect, useRef, useState } from 'react';
+import { useArticlePagination } from '../hooks/useArticlePagination.js';
 import { exportMagazineToPdf } from '../utils/pdfExportClient.js';
+import { MagazineCover } from './MagazineCover.jsx';
+import { MagazineToc } from './MagazineToc.jsx';
 import { MagazinePage } from './MagazinePage.jsx';
 import './MagazinePreview.css';
 
 /**
- * Reusable MagazinePreview component for Phase 2:
- * Automatic Pagination & Text Overflow Engine.
+ * High-End Magazine Preview Page for Web2Mag.
  *
- * @param {{
- *   article: any,
- *   onImportClick?: () => void
- * }} props
+ * Dedicated preview-only experience to view the complete magazine publication
+ * exactly as it will appear in the downloaded PDF.
+ *
+ * Features:
+ * - Clean, professional layout with a neutral backdrop and centered realistic A4 sheets.
+ * - Simple sidebar for thumbnail-based page navigation (no editing controls).
+ * - Simple preview toolbar with page indicator, zoom controls, fit-to-page, and one Download PDF button.
+ * - Complete publication view: Front Cover (p. 1), Table of Contents (p. 2), and Interior Spreads (p. 3..N).
+ * - Synchronized scroll and thumbnail active state.
  */
-export function MagazinePreview({ article, onImportClick }) {
+export function MagazinePreview({
+  article,
+  issueConfig = {},
+  articles = [],
+  onImportClick,
+}) {
+  const [activePageNumber, setActivePageNumber] = useState(1);
   const [zoomLevel, setZoomLevel] = useState(100);
-  const [columnMode, setColumnMode] = useState('two-column'); // 'two-column' | 'single-column'
-  const [selectedPageIndex, setSelectedPageIndex] = useState(0); // 0 = All Pages, 1 = Page 1, etc.
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgressText, setExportProgressText] = useState('');
   const [exportNotice, setExportNotice] = useState(null);
 
+  const viewportRef = useRef(null);
   const canvasContainerRef = useRef(null);
+  const sheetRefs = useRef({});
 
-  const { pages, totalPages, measureContainerRef, onMeasureImageLoad } = useArticlePagination({
+  // Pagination hook for interior article pages
+  const { pages: interiorPages } = useArticlePagination({
     article,
-    columnMode,
+    columnMode: 'two-column',
   });
 
-  const handlePrint = () => {
-    window.print();
+  const totalPublicationPages = interiorPages.length + 2;
+
+  // Zoom handlers
+  const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 10, 150));
+  const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 10, 50));
+  const handleZoomReset = () => setZoomLevel(100);
+
+  // Fit to Page handler: scales A4 sheet (~1123px high) to fit cleanly in viewport
+  const handleFitToPage = () => {
+    if (!viewportRef.current) return;
+    const viewportHeight = viewportRef.current.clientHeight;
+    // Standard A4 height is ~1123px at 96 DPI; leave 72px margin for breathing room
+    const optimalZoom = Math.min(
+      Math.max(Math.floor(((viewportHeight - 72) / 1123) * 100), 40),
+      120
+    );
+    setZoomLevel(optimalZoom);
   };
 
-  const handleExportPdf = async () => {
+  // Navigate to specific page on thumbnail click
+  const handleSelectPage = (pageNum) => {
+    setActivePageNumber(pageNum);
+    const targetEl = sheetRefs.current[pageNum];
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Scroll listener: detects which page is closest to top/center of viewport
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    let timeoutId = null;
+    const handleScroll = () => {
+      if (timeoutId) return;
+      timeoutId = setTimeout(() => {
+        timeoutId = null;
+        const viewportRect = viewport.getBoundingClientRect();
+        const triggerLine = viewportRect.top + 160; // top third zone
+
+        let closestPage = 1;
+        let minDistance = Infinity;
+
+        for (let p = 1; p <= totalPublicationPages; p++) {
+          const el = sheetRefs.current[p];
+          if (el) {
+            const rect = el.getBoundingClientRect();
+            const distance = Math.abs(rect.top - triggerLine);
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestPage = p;
+            }
+          }
+        }
+        setActivePageNumber(closestPage);
+      }, 50);
+    };
+
+    viewport.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      viewport.removeEventListener('scroll', handleScroll);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [totalPublicationPages]);
+
+  // Download PDF handler using existing Puppeteer export client
+  const handleDownloadPdf = async () => {
     if (isExporting || !article) return;
     setIsExporting(true);
+    setExportProgressText('Preparing publication sheets...');
     setExportNotice(null);
 
     const result = await exportMagazineToPdf({
       containerEl: canvasContainerRef.current,
       article,
-      columnMode,
+      columnMode: 'two-column',
       onProgress: (status) => setExportProgressText(status),
     });
 
@@ -50,30 +127,23 @@ export function MagazinePreview({ article, onImportClick }) {
       const seconds = (result.durationMs / 1000).toFixed(2);
       setExportNotice({
         type: 'success',
-        message: `High-resolution A4 PDF exported in ${seconds}s as "${result.filename}"`,
+        message: `High-resolution A4 PDF ready in ${seconds}s as "${result.filename}"`,
       });
-      setTimeout(() => setExportNotice(null), 7000);
+      setTimeout(() => setExportNotice(null), 6000);
     } else {
       setExportNotice({
         type: 'error',
-        message: `Export failed: ${result.error}`,
+        message: `PDF export failed: ${result.error}`,
       });
     }
   };
 
-  const handleZoomChange = (delta) => {
-    setZoomLevel((prev) => Math.min(Math.max(prev + delta, 60), 140));
-  };
-
-  const handleZoomReset = () => {
-    setZoomLevel(100);
-  };
-
+  // Empty state if no article is loaded
   if (!article) {
     return (
-      <div className="magazine-preview-container magazine-preview-container--empty">
-        <div className="magazine-empty-state">
-          <div className="magazine-empty-state__icon" aria-hidden="true">
+      <div className="preview-empty-state">
+        <div className="preview-empty-card">
+          <div className="preview-empty-icon" aria-hidden="true">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -84,34 +154,20 @@ export function MagazinePreview({ article, onImportClick }) {
             >
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-              <line x1="9" y1="7" x2="15" y2="7" />
-              <line x1="9" y1="11" x2="15" y2="11" />
             </svg>
           </div>
-          <h3 className="magazine-empty-state__title">No Article Selected</h3>
-          <p className="magazine-empty-state__desc">
-            Select an article from your library or import a new WordPress URL to
-            render the automatic A4 two-column paginated layout.
+          <h2 className="preview-empty-title">No Publication Selected</h2>
+          <p className="preview-empty-desc">
+            Select an article from your library or import a new article URL to
+            render the complete A4 publication preview.
           </p>
           {onImportClick && (
             <button
               type="button"
-              className="magazine-empty-state__btn"
+              className="preview-empty-btn"
               onClick={onImportClick}
             >
-              <svg
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="10" y1="4" x2="10" y2="16" />
-                <line x1="4" y1="10" x2="16" y2="10" />
-              </svg>
-              <span>Import Article by URL</span>
+              Import Article
             </button>
           )}
         </div>
@@ -119,90 +175,33 @@ export function MagazinePreview({ article, onImportClick }) {
     );
   }
 
-  const wordCount = article.stats?.wordCount || 850;
-  const readingTime = article.stats?.readingTimeMinutes || 4;
-
-  let sourceDomain = 'entechonline.com';
-  try {
-    if (article.sourceUrl) {
-      sourceDomain = new URL(article.sourceUrl).hostname.replace(/^www\./i, '');
-    }
-  } catch {
-    // Keep fallback
-  }
-
-  // Filter pages to display: either all pages or a single selected page
-  const pagesToDisplay =
-    selectedPageIndex === 0
-      ? pages
-      : pages.filter((p) => p.pageNumber === selectedPageIndex);
-
   return (
-    <div className="magazine-preview-container">
-      {/* Top Toolbar */}
-      <div className="magazine-toolbar">
-        <div className="magazine-toolbar__group">
-          <span className="magazine-toolbar__badge">
-            A4 Magazine Layout (210 × 297 mm)
-          </span>
-          <span className="magazine-toolbar__pagination-badge">
-            {totalPages} {totalPages === 1 ? 'Page' : 'Pages'} (Auto-Paginated)
-          </span>
-          <span className="magazine-toolbar__meta">
-            {wordCount} words • ~{readingTime} min read
-          </span>
+    <div className="magazine-preview-root">
+      {/* ----------------------------------------------------------------------
+         1. SIMPLE PREVIEW TOOLBAR
+         Contains ONLY: Current page indicator, Zoom controls, Fit-to-page, Download PDF
+         ---------------------------------------------------------------------- */}
+      <header
+        className="preview-toolbar"
+        role="toolbar"
+        aria-label="Magazine Preview Controls"
+      >
+        <div className="preview-toolbar__left">
+          <div className="preview-page-indicator">
+            <span className="preview-page-indicator__dot" aria-hidden="true" />
+            <span className="preview-page-indicator__text">
+              Page <strong>{activePageNumber}</strong> of {totalPublicationPages}
+            </span>
+          </div>
         </div>
 
-        <div className="magazine-toolbar__actions">
-          {/* Column Mode Toggle */}
-          <div className="magazine-toolbar__btn-group">
+        <div className="preview-toolbar__center">
+          {/* Zoom In, Out & Percentage Reset */}
+          <div className="preview-zoom-group">
             <button
               type="button"
-              className={`magazine-toolbar__btn ${
-                columnMode === 'two-column' ? 'magazine-toolbar__btn--active' : ''
-              }`}
-              onClick={() => setColumnMode('two-column')}
-              title="Two-column balanced layout"
-            >
-              <svg
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                aria-hidden="true"
-              >
-                <rect x="2" y="2" width="5" height="12" rx="1" />
-                <rect x="9" y="2" width="5" height="12" rx="1" />
-              </svg>
-              <span>2-Column</span>
-            </button>
-            <button
-              type="button"
-              className={`magazine-toolbar__btn ${
-                columnMode === 'single-column' ? 'magazine-toolbar__btn--active' : ''
-              }`}
-              onClick={() => setColumnMode('single-column')}
-              title="Single-column wide layout"
-            >
-              <svg
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                aria-hidden="true"
-              >
-                <rect x="2" y="2" width="12" height="12" rx="1" />
-              </svg>
-              <span>1-Column</span>
-            </button>
-          </div>
-
-          {/* Zoom Controls */}
-          <div className="magazine-toolbar__btn-group">
-            <button
-              type="button"
-              className="magazine-toolbar__btn"
-              onClick={() => handleZoomChange(-10)}
+              className="preview-zoom-btn"
+              onClick={handleZoomOut}
               title="Zoom out"
               aria-label="Zoom out"
             >
@@ -210,7 +209,7 @@ export function MagazinePreview({ article, onImportClick }) {
             </button>
             <button
               type="button"
-              className="magazine-toolbar__btn magazine-toolbar__btn--label"
+              className="preview-zoom-btn preview-zoom-btn--label"
               onClick={handleZoomReset}
               title="Reset zoom to 100%"
             >
@@ -218,8 +217,8 @@ export function MagazinePreview({ article, onImportClick }) {
             </button>
             <button
               type="button"
-              className="magazine-toolbar__btn"
-              onClick={() => handleZoomChange(10)}
+              className="preview-zoom-btn"
+              onClick={handleZoomIn}
               title="Zoom in"
               aria-label="Zoom in"
             >
@@ -227,244 +226,284 @@ export function MagazinePreview({ article, onImportClick }) {
             </button>
           </div>
 
-          {/* Dynamic Multi-Page Sheet Switcher */}
-          {totalPages > 1 && (
-            <div className="magazine-toolbar__btn-group">
-              <button
-                type="button"
-                className={`magazine-toolbar__btn ${
-                  selectedPageIndex === 0 ? 'magazine-toolbar__btn--active' : ''
-                }`}
-                onClick={() => setSelectedPageIndex(0)}
-                title="View all sheets sequentially"
-              >
-                All Sheets
-              </button>
-              {pages.map((p) => (
-                <button
-                  key={`btn-page-${p.pageNumber}`}
-                  type="button"
-                  className={`magazine-toolbar__btn ${
-                    selectedPageIndex === p.pageNumber
-                      ? 'magazine-toolbar__btn--active'
-                      : ''
-                  }`}
-                  onClick={() => setSelectedPageIndex(p.pageNumber)}
-                >
-                  Page {p.pageNumber}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Print Fallback */}
+          {/* Fit to Page Option */}
           <button
             type="button"
-            className="magazine-toolbar__btn"
-            onClick={handlePrint}
-            title="Print using browser dialog"
+            className="preview-toolbar-btn"
+            onClick={handleFitToPage}
+            title="Fit A4 page within viewport"
           >
             <svg
-              viewBox="0 0 20 20"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="1.75"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
               aria-hidden="true"
             >
-              <polyline points="5 7 5 3 15 3 15 7" />
-              <path d="M5 13H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-1" />
-              <rect x="5" y="11" width="10" height="6" rx="1" />
+              <polyline points="15 3 21 3 21 9" />
+              <polyline points="9 21 3 21 3 15" />
+              <line x1="21" y1="3" x2="14" y2="10" />
+              <line x1="3" y1="21" x2="10" y2="14" />
             </svg>
-            <span>Print</span>
+            <span>Fit to Page</span>
           </button>
+        </div>
 
-          {/* Export PDF Server Button */}
+        <div className="preview-toolbar__right">
+          {/* One Prominent Download PDF Action */}
           <button
             type="button"
-            className={`magazine-toolbar__btn magazine-toolbar__btn--primary ${
-              isExporting ? 'magazine-toolbar__btn--loading' : ''
+            className={`preview-download-btn ${
+              isExporting ? 'preview-download-btn--loading' : ''
             }`}
-            onClick={handleExportPdf}
+            onClick={handleDownloadPdf}
             disabled={isExporting}
-            title="Export high-resolution multi-page A4 PDF using Headless Chrome"
+            title="Download publication as print-ready vector A4 PDF"
           >
             {isExporting ? (
               <>
-                <span className="editor-btn__spinner" aria-hidden="true" />
-                <span>{exportProgressText || 'Exporting PDF...'}</span>
+                <span className="preview-download-spinner" aria-hidden="true" />
+                <span>{exportProgressText || 'Exporting...'}</span>
               </>
             ) : (
               <>
                 <svg
-                  viewBox="0 0 16 16"
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="1.75"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   aria-hidden="true"
                 >
-                  <path d="M9 2H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6l-4-4z" />
-                  <polyline points="9 2 9 6 13 6" />
-                  <path d="M8 8v4m-2-2 2 2 2-2" />
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                <span>Export PDF</span>
+                <span>Download PDF</span>
               </>
             )}
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* PDF Export Feedback Banner */}
+      {/* Floating Status Notification */}
       {exportNotice && (
         <div
-          className={`editor-export-banner editor-export-banner--${exportNotice.type}`}
+          className={`preview-notice-toast preview-notice-toast--${exportNotice.type}`}
           role="status"
           aria-live="polite"
         >
           <span>{exportNotice.message}</span>
           <button
             type="button"
-            className="editor-export-banner__dismiss"
+            className="preview-notice-toast__close"
             onClick={() => setExportNotice(null)}
-            aria-label="Dismiss export notice"
+            aria-label="Dismiss message"
           >
             &times;
           </button>
         </div>
       )}
 
-      {/* Scalable Viewport */}
-      <div className="magazine-viewport">
-        <div
-          className="magazine-canvas"
-          ref={canvasContainerRef}
-          style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
-        >
-          {pagesToDisplay.map((page) => (
-            <MagazinePage
-              key={`sheet-${article.id || 'current'}-${page.pageNumber}`}
-              article={article}
-              pageNumber={page.pageNumber}
-              totalPages={totalPages}
-              isFirstPage={page.isFirstPage}
-              columnMode={columnMode}
-              columnHeight={page.columnHeight}
-              sections={page.sections}
-              sourceDomain={sourceDomain}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Hidden Measurement Sandbox (Offscreen) */}
-      <div
-        ref={measureContainerRef}
-        className="magazine-measurement-sandbox"
-        aria-hidden="true"
-      >
-        {/* Page 1 Hero Block measurement */}
-        <div data-measure="hero-block" className="magazine-hero-block" style={{ width: '658px' }}>
-          <div className="magazine-category-pill">
-            {(article.category || 'FEATURE FOCUS').toUpperCase()}
+      {/* ----------------------------------------------------------------------
+         2. PREVIEW BODY: SIMPLE NAVIGATION SIDEBAR + SCROLLABLE A4 CANVAS
+         ---------------------------------------------------------------------- */}
+      <div className="preview-body">
+        {/* Simple Navigation Sidebar (Minimal, Thumbnails & Page Numbers only) */}
+        <aside className="preview-sidebar" aria-label="Page Navigation">
+          <div className="preview-sidebar__header">
+            <span className="preview-sidebar__title">
+              Pages ({totalPublicationPages})
+            </span>
           </div>
-          <h1 className="magazine-headline">{article.title}</h1>
-          <div className="magazine-byline-bar">
-            <span>Written By: {article.author || 'Editorial Staff'}</span>
-          </div>
-          {article.summary && (
-            <div className="magazine-standfirst">
-              <p className="magazine-standfirst__text">{article.summary}</p>
-            </div>
-          )}
-          {article.thumbnail && (
-            <figure className="magazine-featured-figure">
-              <img
-                src={article.thumbnail}
-                alt=""
-                className="magazine-featured-figure__img"
-                onLoad={onMeasureImageLoad}
-              />
-            </figure>
-          )}
-        </div>
 
-        {/* Column-width section items measurement */}
-        <div
-          className="magazine-measurement-column"
-          style={{ width: `${COLUMN_WIDTH_PX}px` }}
-        >
-          {article.sections?.map((sec, idx) => (
+          <div className="preview-sidebar__list" role="list">
+            {/* Page 1: Cover Thumbnail */}
             <div
-              key={`m-sec-${idx}`}
-              data-measure-section={sec.id || `sec-${idx}`}
+              role="listitem"
+              className={`preview-thumb-item ${
+                activePageNumber === 1 ? 'preview-thumb-item--active' : ''
+              }`}
+              onClick={() => handleSelectPage(1)}
+              title="Navigate to Page 1: Cover"
             >
-              <RenderMeasurementItem section={sec} onImageLoad={onMeasureImageLoad} />
+              <div className="preview-thumb-card preview-thumb-card--cover">
+                <div className="preview-thumb-mini preview-thumb-mini--cover">
+                  <div className="preview-thumb-mini__cover-kicker" />
+                  <div className="preview-thumb-mini__cover-title" />
+                  <div className="preview-thumb-mini__cover-deck" />
+                </div>
+              </div>
+              <div className="preview-thumb-meta">
+                <span className="preview-thumb-meta__num">Page 1</span>
+                <span className="preview-thumb-meta__tag">Cover</span>
+              </div>
             </div>
-          ))}
-        </div>
+
+            {/* Page 2: Table of Contents Thumbnail */}
+            <div
+              role="listitem"
+              className={`preview-thumb-item ${
+                activePageNumber === 2 ? 'preview-thumb-item--active' : ''
+              }`}
+              onClick={() => handleSelectPage(2)}
+              title="Navigate to Page 2: Table of Contents"
+            >
+              <div className="preview-thumb-card preview-thumb-card--toc">
+                <div className="preview-thumb-mini preview-thumb-mini--toc">
+                  <div className="preview-thumb-mini__toc-title">CONTENTS</div>
+                  <div className="preview-thumb-mini__toc-line" />
+                  <div className="preview-thumb-mini__toc-line" />
+                  <div className="preview-thumb-mini__toc-line" />
+                </div>
+              </div>
+              <div className="preview-thumb-meta">
+                <span className="preview-thumb-meta__num">Page 2</span>
+                <span className="preview-thumb-meta__tag">Contents</span>
+              </div>
+            </div>
+
+            {/* Pages 3..N: Interior Pages Thumbnails */}
+            {interiorPages.map((page, idx) => {
+              const pubPageNum = idx + 3;
+              const isFirstInterior = idx === 0;
+              return (
+                <div
+                  key={pubPageNum}
+                  role="listitem"
+                  className={`preview-thumb-item ${
+                    activePageNumber === pubPageNum
+                      ? 'preview-thumb-item--active'
+                      : ''
+                  }`}
+                  onClick={() => handleSelectPage(pubPageNum)}
+                  title={`Navigate to Page ${pubPageNum}`}
+                >
+                  <div className="preview-thumb-card">
+                    <div className="preview-thumb-mini">
+                      <div className="preview-thumb-mini__header" />
+                      {isFirstInterior && (
+                        <div className="preview-thumb-mini__hero">
+                          <div className="preview-thumb-mini__hero-title" />
+                        </div>
+                      )}
+                      <div className="preview-thumb-mini__cols">
+                        <div className="preview-thumb-mini__col">
+                          <div className="preview-thumb-mini__text-line" />
+                          <div className="preview-thumb-mini__text-line" />
+                          <div className="preview-thumb-mini__text-line" />
+                        </div>
+                        <div className="preview-thumb-mini__col">
+                          <div className="preview-thumb-mini__text-line" />
+                          <div className="preview-thumb-mini__text-line" />
+                          <div className="preview-thumb-mini__text-line" />
+                        </div>
+                      </div>
+                      <div className="preview-thumb-mini__footer">
+                        <span>{pubPageNum}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="preview-thumb-meta">
+                    <span className="preview-thumb-meta__num">
+                      Page {pubPageNum}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
+
+        {/* Vertically Scrollable Preview Canvas (Neutral backdrop, centered A4 sheets) */}
+        <main
+          className="preview-viewport"
+          ref={viewportRef}
+          aria-label="Magazine Publication Viewport"
+        >
+          <div className="preview-canvas-container" ref={canvasContainerRef}>
+            <div
+              className="preview-scale-wrapper"
+              style={{
+                transform: `scale(${zoomLevel / 100})`,
+                transformOrigin: 'top center',
+              }}
+            >
+              {/* Page 1: Front Cover */}
+              <div
+                id="preview-page-1"
+                ref={(el) => (sheetRefs.current[1] = el)}
+                className={`preview-sheet-frame ${
+                  activePageNumber === 1 ? 'preview-sheet-frame--focused' : ''
+                }`}
+              >
+                <MagazineCover
+                  issue={issueConfig}
+                  article={article}
+                  otherArticles={articles}
+                  isEditable={false}
+                />
+              </div>
+
+              {/* Page 2: Table of Contents */}
+              <div
+                id="preview-page-2"
+                ref={(el) => (sheetRefs.current[2] = el)}
+                className={`preview-sheet-frame ${
+                  activePageNumber === 2 ? 'preview-sheet-frame--focused' : ''
+                }`}
+              >
+                <MagazineToc
+                  issue={issueConfig}
+                  article={article}
+                  articles={articles}
+                  pages={interiorPages}
+                  totalPages={totalPublicationPages}
+                  onSelectPage={handleSelectPage}
+                />
+              </div>
+
+              {/* Pages 3..N: Interior Spreads */}
+              {interiorPages.map((page, idx) => {
+                const pubPageNum = idx + 3;
+                return (
+                  <div
+                    key={pubPageNum}
+                    id={`preview-page-${pubPageNum}`}
+                    ref={(el) => (sheetRefs.current[pubPageNum] = el)}
+                    className={`preview-sheet-frame ${
+                      activePageNumber === pubPageNum
+                        ? 'preview-sheet-frame--focused'
+                        : ''
+                    }`}
+                  >
+                    <MagazinePage
+                      article={article}
+                      pageNumber={pubPageNum}
+                      totalPages={totalPublicationPages}
+                      isFirstPage={idx === 0}
+                      hideHeroThumbnail={true}
+                      columnMode="two-column"
+                      columnHeight={page.columnHeight}
+                      sections={page.sections}
+                      isEditable={false}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   );
-}
-
-/**
- * Renders an individual section in the measurement sandbox.
- */
-function RenderMeasurementItem({ section, onImageLoad }) {
-  if (!section) return null;
-
-  switch (section.type) {
-    case 'heading': {
-      const HeadingTag = `h${section.level || 2}`;
-      return (
-        <HeadingTag className={`magazine-heading magazine-heading--h${section.level || 2}`}>
-          {section.content}
-        </HeadingTag>
-      );
-    }
-    case 'paragraph': {
-      return <p className="magazine-paragraph">{section.content}</p>;
-    }
-    case 'image': {
-      if (!section.src) return null;
-      return (
-        <figure className="magazine-inline-figure">
-          <img
-            src={section.src}
-            alt=""
-            className="magazine-inline-figure__img"
-            onLoad={onImageLoad}
-          />
-          {section.caption && (
-            <figcaption className="magazine-inline-figure__caption">
-              {section.caption}
-            </figcaption>
-          )}
-        </figure>
-      );
-    }
-    case 'quote': {
-      return (
-        <blockquote className="magazine-pull-quote">
-          <p className="magazine-pull-quote__text">{section.content}</p>
-        </blockquote>
-      );
-    }
-    case 'list': {
-      return (
-        <ul className="magazine-list">
-          {section.items?.map((it, i) => (
-            <li key={i} className="magazine-list__item">
-              {it}
-            </li>
-          ))}
-        </ul>
-      );
-    }
-    default:
-      return null;
-  }
 }
 
 export default MagazinePreview;

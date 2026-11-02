@@ -1,351 +1,285 @@
-/* App.css — Web2Mag Editorial Magazine Studio Dashboard Layout */
+/* ==========================================================================
+   App.css — Web2Mag Editorial Publishing Platform
+   Refined Palette: Deep Navy (#0a1128), Warm White (#f8fafc), Electric Blue (#2563eb)
+   ========================================================================== */
+
+:root {
+  --color-navy: #0a1128;
+  --color-navy-dark: #060b1c;
+  --color-navy-light: #162447;
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4ed8;
+  --color-accent-subtle: #eff6ff;
+  --color-neutral: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text-main: #0f172a;
+  --color-text-muted: #64748b;
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-body: 'Source Serif 4', Georgia, serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-neutral);
+  color: var(--color-text-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
 .app-shell {
   min-height: 100vh;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f1f5f9;
+  background-color: var(--color-neutral);
   overflow: hidden;
 }
 
-/* ==========================================================================
-   1. TOP EDITORIAL TOOLBAR
-   ========================================================================== */
-.editorial-toolbar {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  height: 56px;
-  flex-shrink: 0;
-  z-index: 50;
+/* --------------------------------------------------------------------------
+   1. Top Navigation Bar
+   -------------------------------------------------------------------------- */
+.app-nav {
+  height: 58px;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
-  gap: 16px;
-}
-
-/* Left: Branding & Issue Info */
-.editorial-toolbar__left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-width: 0;
-}
-
-.editorial-brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  text-decoration: none;
+  padding: 0 24px;
   flex-shrink: 0;
+  z-index: 100;
+  box-shadow: 0 1px 2px rgba(10, 17, 40, 0.03);
 }
 
-.editorial-brand__logo {
+.app-nav__left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.app-brand__logo {
   width: 32px;
   height: 32px;
-  border-radius: 7px;
-  background-color: #0284c7;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-accent) 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 5px rgba(2, 132, 199, 0.3);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
 }
 
-.editorial-brand__logo svg {
+.app-brand__logo svg {
   width: 18px;
   height: 18px;
 }
 
-.editorial-brand__titles {
+.app-brand__titles {
   display: flex;
   align-items: baseline;
   gap: 6px;
 }
 
-.editorial-brand__name {
-  font-size: 1.125rem;
+.app-brand__name {
+  font-family: var(--font-sans);
+  font-size: 1.15rem;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--color-navy);
   letter-spacing: -0.025em;
 }
 
-.editorial-brand__badge {
-  font-size: 0.625rem;
+.app-brand__badge {
+  font-size: 0.65rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #0284c7;
-  background-color: #f0f9ff;
-  border: 1px solid #bae6fd;
-  padding: 1px 5px;
+  color: var(--color-accent);
+  background-color: var(--color-accent-subtle);
+  border: 1px solid #bfdbfe;
+  padding: 1px 6px;
   border-radius: 4px;
 }
 
-.editorial-toolbar__divider {
+.app-nav__divider {
   width: 1px;
   height: 24px;
-  background-color: #e2e8f0;
+  background-color: var(--color-border);
   flex-shrink: 0;
 }
 
-.editorial-issue-badge {
+/* View Switcher Tabs */
+.app-view-switcher {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
+  background-color: #f1f5f9;
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  gap: 2px;
 }
 
-.editorial-issue__title {
-  font-size: 0.84375rem;
-  font-weight: 700;
-  color: #0f172a;
-  white-space: nowrap;
-}
-
-.editorial-issue__meta {
-  font-size: 0.75rem;
-  color: #64748b;
-  white-space: nowrap;
-}
-
-.editorial-issue__issn {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.6875rem;
-  color: #94a3b8;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  padding: 2px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
-}
-
-/* Center: Preview Zoom Controls */
-.editorial-toolbar__center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-}
-
-.preview-controls {
+.app-view-tab {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  padding: 3px 6px;
-  border-radius: 7px;
-}
-
-.preview-controls__label {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #64748b;
-  padding: 0 4px;
-}
-
-.preview-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 5px;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #334155;
-  font-size: 0.875rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  gap: 7px;
+  background: transparent;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: 6px 14px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
+  user-select: none;
 }
 
-.preview-btn:hover:not(:disabled) {
-  background-color: #f1f5f9;
-  border-color: #94a3b8;
-  color: #0f172a;
+.app-view-tab:hover:not(:disabled) {
+  color: var(--color-text-main);
+  background-color: rgba(255, 255, 255, 0.6);
 }
 
-.preview-btn:disabled {
+.app-view-tab--active {
+  background-color: var(--color-surface);
+  color: var(--color-navy);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.app-view-tab:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-.preview-controls__value {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #0f172a;
-  min-width: 44px;
-  text-align: center;
+.app-view-tab__pill {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--color-accent);
+  background-color: var(--color-accent-subtle);
+  padding: 1px 6px;
+  border-radius: 10px;
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.preview-preset-btn {
-  padding: 3px 8px;
-  font-family: inherit;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: #475569;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.preview-preset-btn:hover {
-  background-color: #f1f5f9;
-  color: #0f172a;
-}
-
-.preview-preset-btn.active {
-  background-color: #0284c7;
-  border-color: #0284c7;
-  color: #ffffff;
-  font-weight: 700;
-}
-
-/* Right: Actions */
-.editorial-toolbar__right {
+/* Right Nav Buttons */
+.app-nav__right {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
 }
 
-.editorial-btn {
-  padding: 7px 14px;
-  font-family: inherit;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  border-radius: 7px;
-  cursor: pointer;
+.app-nav-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
-.editorial-btn svg {
-  width: 15px;
-  height: 15px;
-}
-
-.editorial-btn--config {
-  padding: 4px 9px;
-  font-size: 0.71875rem;
-  color: #334155;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-}
-
-.editorial-btn--config:hover {
-  background-color: #f1f5f9;
-  border-color: #94a3b8;
-  color: #0284c7;
-}
-
-.editorial-btn--import {
-  color: #ffffff;
-  background-color: #0284c7;
-  border: 1px solid #0369a1;
-  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.2);
-}
-
-.editorial-btn--import:hover {
-  background-color: #0369a1;
-}
-
-.editorial-btn--edit {
-  color: #0f172a;
+.app-nav-btn--config {
   background-color: #f8fafc;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-border);
+  color: #334155;
 }
 
-.editorial-btn--edit:hover {
+.app-nav-btn--config:hover {
   background-color: #f1f5f9;
-  border-color: #0284c7;
-  color: #0284c7;
+  border-color: #cbd5e1;
 }
 
-.editorial-btn--export {
+.app-nav-btn--import {
+  background-color: var(--color-accent-subtle);
+  border: 1px solid #bfdbfe;
+  color: var(--color-accent);
+}
+
+.app-nav-btn--import:hover {
+  background-color: #dbeafe;
+  border-color: var(--color-accent);
+}
+
+.app-nav-btn--export {
+  background-color: var(--color-navy);
   color: #ffffff;
-  background-color: #059669;
-  border: 1px solid #047857;
-  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.25);
+  box-shadow: 0 2px 6px rgba(10, 17, 40, 0.2);
 }
 
-.editorial-btn--export:hover:not(:disabled) {
-  background-color: #047857;
+.app-nav-btn--export:hover:not(:disabled) {
+  background-color: var(--color-accent);
 }
 
-.editorial-btn--export:disabled {
-  opacity: 0.65;
+.app-nav-btn:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
-.editorial-btn--loading {
-  cursor: wait;
-}
-
-.editorial-spinner {
+.app-nav-spinner {
   width: 13px;
   height: 13px;
-  border: 2px solid rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.35);
   border-top-color: #ffffff;
   border-radius: 50%;
-  animation: editorial-spin 0.75s linear infinite;
+  animation: appSpin 0.65s linear infinite;
   display: inline-block;
 }
 
-@keyframes editorial-spin {
+@keyframes appSpin {
   to {
     transform: rotate(360deg);
   }
 }
 
-.editorial-btn--export-disabled {
-  color: #94a3b8;
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  cursor: not-allowed;
-  position: relative;
-}
-
-.editorial-btn--export-disabled:hover::after {
-  content: attr(title);
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 6px;
-  background-color: #0f172a;
-  color: #ffffff;
-  font-size: 0.6875rem;
-  font-weight: 500;
-  padding: 5px 9px;
-  border-radius: 5px;
-  white-space: nowrap;
-  z-index: 100;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-/* ==========================================================================
-   2. STATUS NOTICE BANNER
-   ========================================================================== */
+/* --------------------------------------------------------------------------
+   Notification Banner
+   -------------------------------------------------------------------------- */
 .app-notice-bar {
-  padding: 8px 18px;
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  font-size: 0.8125rem;
+  padding: 8px 24px;
+  font-size: 13px;
   font-weight: 500;
   border-bottom: 1px solid transparent;
+  flex-shrink: 0;
+  animation: fadeInNotice 0.2s ease-out;
+}
+
+@keyframes fadeInNotice {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .app-notice-bar--success {
@@ -354,10 +288,10 @@
   color: #065f46;
 }
 
-.app-notice-bar--duplicate {
-  background-color: #fffbeb;
-  border-color: #fde68a;
-  color: #92400e;
+.app-notice-bar--error {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
 }
 
 .app-notice-bar--info {
@@ -366,188 +300,69 @@
   color: #1e40af;
 }
 
-.app-notice-bar--error {
-  background-color: #fef2f2;
-  border-color: #fecaca;
-  color: #991b1b;
-}
-
-.app-notice-bar__dismiss {
-  appearance: none;
-  background: transparent;
-  border: 1px solid currentColor;
-  border-radius: 4px;
-  padding: 2px 7px;
-  font-family: inherit;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  color: inherit;
-  cursor: pointer;
-  opacity: 0.85;
-}
-
-.app-notice-bar__dismiss:hover {
-  opacity: 1;
-}
-
-/* ==========================================================================
-   3. THREE-PANEL EDITORIAL WORKSPACE
-   ========================================================================== */
-.editorial-workspace {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 340px 1fr 320px;
-  overflow: hidden;
-  position: relative;
-}
-
-/* Left Sidebar (Article Library) */
-.editorial-workspace__library-pane {
-  background-color: #ffffff;
-  border-right: 1px solid #e2e8f0;
-  height: 100%;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Center Workspace (A4 Magazine Page Canvas) */
-.editorial-workspace__canvas-pane {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-  background-color: #0b0f19;
-  position: relative;
-}
-
-.canvas-header {
-  height: 38px;
-  background-color: #111827;
-  border-bottom: 1px solid #1f2937;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 18px;
-  flex-shrink: 0;
-}
-
-.canvas-header__info {
+.app-notice-bar__content {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.canvas-header__title {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  letter-spacing: 0.02em;
-}
-
-.canvas-header__pill {
-  font-size: 0.65625rem;
-  font-weight: 600;
-  color: #38bdf8;
-  background-color: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  padding: 1px 7px;
-  border-radius: 9999px;
-}
-
-.canvas-header__status {
-  font-size: 0.6875rem;
-  color: #94a3b8;
-  display: flex;
+.app-notice-bar__icon {
+  font-weight: 800;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
 }
 
-.canvas-header__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #10b981;
+.app-notice-bar__dismiss {
+  background: none;
+  border: none;
+  font-size: 16px;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
-/* Canvas Viewport */
-.canvas-viewport {
+.app-notice-bar__dismiss:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* --------------------------------------------------------------------------
+   2. Main View Container
+   -------------------------------------------------------------------------- */
+.app-main-view {
   flex: 1;
   min-height: 0;
-  overflow: auto;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 32px 24px;
-  background-color: #0b0f19;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
-  background-size: 20px 20px;
-  box-sizing: border-box;
-}
-
-/* Centered A4 Page Scaling Box */
-.canvas-scaler {
+  flex-direction: column;
   position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  margin: 0 auto;
+  overflow: hidden;
 }
 
-.canvas-page-wrapper {
-  transform-origin: top center;
-  transition: transform 0.1s ease-out;
-}
-
-/* Right Sidebar (Article & Layout Inspector) */
-.editorial-workspace__inspector-pane {
-  background-color: #ffffff;
-  border-left: 1px solid #e2e8f0;
-  height: 100%;
+/* Dashboard View Wrapper (Scrollable) */
+.app-dashboard-wrapper {
+  flex: 1;
   overflow-y: auto;
+  padding-top: 28px;
+}
+
+/* Editor View Wrapper (Fixed 100% viewport) */
+.app-editor-wrapper {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* ==========================================================================
-   4. RESPONSIVE BREAKPOINTS
-   ========================================================================== */
-@media (max-width: 1200px) {
-  .editorial-workspace {
-    grid-template-columns: 300px 1fr 280px;
-  }
-
-  .editorial-issue__issn {
-    display: none;
-  }
-}
-
-@media (max-width: 960px) {
-  .app-shell {
-    height: auto;
-    overflow: visible;
-  }
-
-  .editorial-workspace {
-    grid-template-columns: 1fr;
-    height: auto;
-    overflow: visible;
-  }
-
-  .editorial-workspace__library-pane,
-  .editorial-workspace__inspector-pane {
-    height: auto;
-    max-height: 500px;
-  }
-
-  .editorial-workspace__canvas-pane {
-    height: 750px;
-  }
-
-  .editorial-toolbar {
-    height: auto;
-    padding: 10px 14px;
-    flex-wrap: wrap;
-  }
+/* Preview View Wrapper (Scrollable reader) */
+.app-preview-wrapper {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }

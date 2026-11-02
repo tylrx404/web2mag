@@ -1,0 +1,380 @@
+/* ==========================================================================
+   Table of Contents (Page 2) Stylesheet for Web2Mag
+   A4 Magazine Geometry (210mm × 297mm)
+   Palette: Deep Navy (#0a1128), White (#ffffff), Electric Blue (#2563eb), Neutral (#f8fafc)
+   ========================================================================== */
+
+.magazine-toc {
+  width: 210mm;
+  min-height: 297mm;
+  box-sizing: border-box;
+  background-color: #ffffff;
+  color: #1e293b;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Charter', 'Bitstream Charter', 'Sitka Text', 'Cambria', Georgia, serif;
+}
+
+/* --------------------------------------------------------------------------
+   TOC Masthead / Title Header
+   -------------------------------------------------------------------------- */
+.magazine-toc__header-block {
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid #0a1128;
+}
+
+.magazine-toc__kicker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.magazine-toc__kicker-pill {
+  display: inline-block;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 8pt;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background-color: var(--brand-accent, #2563eb);
+  padding: 3px 10px;
+  border-radius: 3px;
+}
+
+.magazine-toc__issue-tag {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 8.5pt;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.magazine-toc__main-title {
+  margin: 6px 0 4px;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 32pt;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  color: #0a1128;
+  text-transform: uppercase;
+}
+
+.magazine-toc__deck {
+  margin: 0;
+  font-size: 10pt;
+  font-style: italic;
+  color: #475569;
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
+   TOC Layout Grid (Main Column + Colophon Side Panel)
+   -------------------------------------------------------------------------- */
+.magazine-toc__body-grid {
+  display: grid;
+  grid-template-columns: 1fr 210px;
+  gap: 28px;
+  flex: 1;
+}
+
+.magazine-toc__main-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.magazine-toc__side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border-left: 1px solid #e2e8f0;
+  padding-left: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   Featured Cover Story Hero Box
+   -------------------------------------------------------------------------- */
+.magazine-toc__hero-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid var(--brand-accent, #2563eb);
+  border-radius: 0 8px 8px 0;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.magazine-toc__hero-card:hover {
+  background-color: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(10, 17, 40, 0.06);
+}
+
+.magazine-toc__hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.magazine-toc__page-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--brand-accent, #2563eb);
+}
+
+.magazine-toc__page-prefix {
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.magazine-toc__page-num {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20pt;
+  font-weight: 800;
+  line-height: 1;
+  color: #0a1128;
+}
+
+.magazine-toc__hero-kicker {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 7.5pt;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background-color: #0a1128;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.magazine-toc__hero-title {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 16pt;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #0a1128;
+}
+
+.magazine-toc__hero-deck {
+  margin: 0;
+  font-size: 9.5pt;
+  line-height: 1.45;
+  color: #334155;
+  font-style: italic;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.magazine-toc__hero-byline {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 8pt;
+  font-weight: 600;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.magazine-toc__hero-author {
+  color: #0a1128;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   Section Breakdown & Multi-Article List
+   -------------------------------------------------------------------------- */
+.magazine-toc__section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.magazine-toc__section-heading {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 8.5pt;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #0a1128;
+  border-bottom: 1.5px solid #e2e8f0;
+  padding-bottom: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.magazine-toc__entries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.magazine-toc__entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #e2e8f0;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.magazine-toc__entry:hover {
+  background-color: rgba(37, 99, 235, 0.04);
+}
+
+.magazine-toc__entry:last-child {
+  border-bottom: none;
+}
+
+.magazine-toc__entry-page {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13pt;
+  font-weight: 800;
+  color: var(--brand-accent, #2563eb);
+  min-width: 32px;
+  line-height: 1.1;
+  text-align: right;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.magazine-toc__entry-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.magazine-toc__entry-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.magazine-toc__entry-title {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 10pt;
+  font-weight: 700;
+  color: #0a1128;
+  line-height: 1.3;
+}
+
+.magazine-toc__entry-kicker {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-accent, #2563eb);
+  background-color: #eff6ff;
+  padding: 1px 6px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.magazine-toc__entry-snippet {
+  margin: 0;
+  font-size: 8.5pt;
+  line-height: 1.4;
+  color: #64748b;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Colophon / Publication Metadata Side Card
+   -------------------------------------------------------------------------- */
+.magazine-toc__colophon {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.magazine-toc__colophon-title {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 8pt;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #0a1128;
+  border-bottom: 1.5px solid #0a1128;
+  padding-bottom: 4px;
+}
+
+.magazine-toc__colophon-text {
+  margin: 0;
+  font-size: 8pt;
+  line-height: 1.45;
+  color: #475569;
+}
+
+.magazine-toc__meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 7.5pt;
+  color: #64748b;
+}
+
+.magazine-toc__meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.magazine-toc__meta-label {
+  font-weight: 700;
+  color: #0a1128;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.magazine-toc__meta-val {
+  color: #334155;
+}
+
+.magazine-toc__quote-card {
+  margin-top: auto;
+  background-color: #f0f7ff;
+  border-left: 3px solid var(--brand-accent, #2563eb);
+  padding: 10px 12px;
+  border-radius: 0 4px 4px 0;
+}
+
+.magazine-toc__quote-text {
+  margin: 0;
+  font-size: 8.5pt;
+  font-style: italic;
+  line-height: 1.4;
+  color: #0a1128;
+}

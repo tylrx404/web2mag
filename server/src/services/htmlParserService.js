@@ -58,7 +58,7 @@ const UNWANTED_SELECTORS = [
 function resolveUrl(rawUrl, baseUrl) {
   if (!rawUrl || typeof rawUrl !== 'string') return '';
   const trimmed = rawUrl.trim();
-  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return '';
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
   try {
     if (baseUrl) {
       return new URL(trimmed, baseUrl).href;
@@ -67,6 +67,58 @@ function resolveUrl(rawUrl, baseUrl) {
   } catch {
     return trimmed.startsWith('http') ? trimmed : '';
   }
+}
+
+/**
+ * Extracts the highest quality image URL from a Cheerio img tag,
+ * prioritizing data-src, hi-res candidates, and parsed srcset over low-res placeholders.
+ *
+ * @param {import('cheerio').Cheerio} $img
+ * @param {string} [baseUrl]
+ * @returns {string}
+ */
+export function extractBestImageSrc($img, baseUrl = '') {
+  if (!$img || !$img.length) return '';
+
+  // Check data-srcset or srcset
+  const srcset = $img.attr('data-srcset') || $img.attr('srcset');
+  if (srcset) {
+    const candidates = srcset.split(',').map((c) => {
+      const parts = c.trim().split(/\s+/);
+      const url = parts[0];
+      const descriptor = parts[1] || '1x';
+      const widthMatch = descriptor.match(/(\d+)w/i);
+      const densityMatch = descriptor.match(/(\d+(?:\.\d+)?)x/i);
+      const width = widthMatch
+        ? parseInt(widthMatch[1], 10)
+        : densityMatch
+        ? parseFloat(densityMatch[1]) * 800
+        : 0;
+      return { url, width };
+    });
+    candidates.sort((a, b) => b.width - a.width);
+    if (candidates.length > 0 && candidates[0].url) {
+      return resolveUrl(candidates[0].url, baseUrl);
+    }
+  }
+
+  // Check lazy data-src attributes
+  const dataSrc =
+    $img.attr('data-src') ||
+    $img.attr('data-original') ||
+    $img.attr('data-lazy-src') ||
+    $img.attr('data-hi-res-src');
+  if (dataSrc) {
+    return resolveUrl(dataSrc, baseUrl);
+  }
+
+  // Fallback to standard src attribute
+  const src = $img.attr('src');
+  if (src) {
+    return resolveUrl(src, baseUrl);
+  }
+
+  return '';
 }
 
 /**
@@ -91,19 +143,10 @@ function sanitizeElement($el, baseUrl) {
       $el.attr('target', '_blank');
       $el.attr('rel', 'noopener noreferrer');
     }
-    // Remove class names from links
     $el.removeAttr('class');
   } else if (tagName === 'img') {
-    let src = $el.attr('src');
-    // Handle lazy loaded images (data-src, data-lazy-src, data-original)
-    if (!src || src.startsWith('data:')) {
-      src =
-        $el.attr('data-src') ||
-        $el.attr('data-lazy-src') ||
-        $el.attr('data-original') ||
-        '';
-    }
-    $el.attr('src', resolveUrl(src, baseUrl));
+    const bestSrc = extractBestImageSrc($el, baseUrl);
+    $el.attr('src', bestSrc);
     $el.removeAttr('loading');
     $el.removeAttr('srcset');
     $el.removeAttr('sizes');
@@ -134,7 +177,8 @@ function sanitizeElement($el, baseUrl) {
  *     items?: string[]
  *   }>,
  *   summary: string,
- *   firstImageUrl: string
+ *   firstImageUrl: string,
+ *   validation?: object
  * }}
  */
 export function cleanHtmlAndExtractSections(rawHtml, baseUrl = '') {
@@ -144,6 +188,12 @@ export function cleanHtmlAndExtractSections(rawHtml, baseUrl = '') {
       sections: [],
       summary: '',
       firstImageUrl: '',
+      validation: {
+        isComplete: false,
+        sourceBlocks: { paragraphs: 0, headings: 0, images: 0, quotes: 0, lists: 0 },
+        extractedBlocks: { paragraphs: 0, headings: 0, images: 0, quotes: 0, lists: 0 },
+        potentialMissingParagraphs: 0,
+      },
     };
   }
 
@@ -154,158 +204,176 @@ export function cleanHtmlAndExtractSections(rawHtml, baseUrl = '') {
     $(selector).remove();
   });
 
+  const contentRoot = $('body').length ? $('body') : $.root();
+
+  // Count source blocks for extraction validation
+  const sourceParagraphs = contentRoot
+    .find('p')
+    .filter((_, el) => $(el).parents('blockquote, figure, ul, ol').length === 0).length;
+  const sourceHeadings = contentRoot
+    .find('h1, h2, h3, h4, h5, h6')
+    .filter((_, el) => $(el).parents('blockquote, figure, ul, ol').length === 0).length;
+  const sourceImages = contentRoot
+    .find('img, figure')
+    .filter(
+      (_, el) =>
+        $(el).parents('blockquote, ul, ol').length === 0 &&
+        (!$(el).is('img') || $(el).parents('figure').length === 0)
+    ).length;
+  const sourceQuotes = contentRoot.find('blockquote').length;
+  const sourceLists = contentRoot
+    .find('ul, ol')
+    .filter((_, el) => $(el).parents('ul, ol').length === 0).length;
+
   const sections = [];
   let firstImageUrl = '';
   let summary = '';
 
   // 2. Walk through block-level content elements in document order
-  // Target blocks: p, h1, h2, h3, h4, h5, h6, figure, img, ul, ol, blockquote
-  const contentRoot = $('body').length ? $('body') : $.root();
+  contentRoot
+    .find('p, h1, h2, h3, h4, h5, h6, figure, img, ul, ol, blockquote')
+    .each((_, elem) => {
+      const $elem = $(elem);
 
-  contentRoot.find('p, h1, h2, h3, h4, h5, h6, figure, img, ul, ol, blockquote').each((_, elem) => {
-    const $elem = $(elem);
-
-    // Skip elements that are nested inside another container we already process (e.g., p inside blockquote, img inside figure, li inside ul)
-    if ($elem.parents('blockquote, figure, ul, ol').length > 0) {
-      return;
-    }
-
-    const tagName = elem.tagName.toLowerCase();
-
-    // Headings
-    if (/^h[1-6]$/.test(tagName)) {
-      const level = Math.min(Math.max(parseInt(tagName[1], 10), 2), 4);
-      const text = cleanDecodedText($elem.text());
-      if (text && text.length > 2) {
-        sections.push({
-          type: 'heading',
-          level,
-          content: text,
-        });
+      // Skip elements that are nested inside another container we already process
+      if ($elem.parents('blockquote, figure, ul, ol').length > 0) {
+        return;
       }
-      return;
-    }
 
-    // Paragraphs
-    if (tagName === 'p') {
-      // Check if paragraph is just an image wrapper
-      const $img = $elem.find('img');
-      if ($img.length === 1 && $elem.text().trim() === '') {
-        const src = resolveUrl($img.attr('src') || $img.attr('data-src'), baseUrl);
+      const tagName = elem.tagName.toLowerCase();
+
+      // Headings
+      if (/^h[1-6]$/.test(tagName)) {
+        const level = Math.min(Math.max(parseInt(tagName[1], 10), 2), 4);
+        const text = cleanDecodedText($elem.text());
+        if (text && text.length > 0) {
+          sections.push({
+            type: 'heading',
+            level,
+            content: text,
+          });
+        }
+        return;
+      }
+
+      // Paragraphs
+      if (tagName === 'p') {
+        // Check if paragraph is just an image wrapper
+        const $img = $elem.find('img');
+        if ($img.length === 1 && $elem.text().trim() === '') {
+          const src = extractBestImageSrc($img, baseUrl);
+          const alt = cleanDecodedText($img.attr('alt') || '');
+          if (src) {
+            if (!firstImageUrl) firstImageUrl = src;
+            sections.push({
+              type: 'image',
+              src,
+              alt,
+              caption: '',
+            });
+          }
+          return;
+        }
+
+        // Sanitize inline links and formatting
+        $elem.find('*').each((__, child) => {
+          sanitizeElement($(child), baseUrl);
+        });
+
+        const text = cleanDecodedText($elem.text());
+        const lower = text.toLowerCase();
+        if (
+          lower === 'table of contents' ||
+          lower.startsWith('table of contents') ||
+          lower.startsWith('reading time:')
+        ) {
+          return;
+        }
+
+        if (text && text.length > 0) {
+          // Capture first substantial paragraph for default summary if needed
+          if (!summary && text.length > 25) {
+            summary = text.length > 280 ? `${text.slice(0, 277)}...` : text;
+          }
+
+          const inlineHtml = $elem.html()?.trim() || text;
+          sections.push({
+            type: 'paragraph',
+            content: text,
+            html: inlineHtml,
+          });
+        }
+        return;
+      }
+
+      // Figures / Images with captions
+      if (tagName === 'figure') {
+        const $img = $elem.find('img').first();
+        const $caption = $elem.find('figcaption').first();
+        const src = extractBestImageSrc($img, baseUrl);
         const alt = cleanDecodedText($img.attr('alt') || '');
+        const caption = cleanDecodedText($caption.text() || '');
+
         if (src) {
           if (!firstImageUrl) firstImageUrl = src;
           sections.push({
             type: 'image',
             src,
-            alt,
+            alt: alt || caption || 'Article figure',
+            caption: caption || '',
+          });
+        }
+        return;
+      }
+
+      // Standalone img
+      if (tagName === 'img') {
+        const src = extractBestImageSrc($elem, baseUrl);
+        const alt = cleanDecodedText($elem.attr('alt') || '');
+
+        if (src) {
+          if (!firstImageUrl) firstImageUrl = src;
+          sections.push({
+            type: 'image',
+            src,
+            alt: alt || 'Article image',
             caption: '',
           });
         }
         return;
       }
 
-      // Sanitize inline links and formatting
-      $elem.find('*').each((__, child) => {
-        sanitizeElement($(child), baseUrl);
-      });
-
-      const text = cleanDecodedText($elem.text());
-      const lower = text.toLowerCase();
-      if (
-        lower === 'table of contents' ||
-        lower.startsWith('table of contents') ||
-        lower.startsWith('reading time:')
-      ) {
+      // Blockquotes
+      if (tagName === 'blockquote') {
+        const text = cleanDecodedText($elem.text());
+        const cite = cleanDecodedText($elem.find('cite').text());
+        if (text) {
+          sections.push({
+            type: 'quote',
+            content: text,
+            citation: cite,
+          });
+        }
         return;
       }
 
-      if (text && text.length > 15) {
-        // Capture first substantial paragraph for default summary if needed
-        if (!summary && text.length > 30) {
-          summary = text.length > 280 ? `${text.slice(0, 277)}...` : text;
+      // Lists (ul, ol)
+      if (tagName === 'ul' || tagName === 'ol') {
+        const items = [];
+        $elem.find('li').each((__, li) => {
+          const itemText = cleanDecodedText($(li).text());
+          if (itemText) items.push(itemText);
+        });
+
+        if (items.length > 0) {
+          sections.push({
+            type: 'list',
+            ordered: tagName === 'ol',
+            items,
+          });
         }
-
-        const inlineHtml = $elem.html()?.trim() || text;
-        sections.push({
-          type: 'paragraph',
-          content: text,
-          html: inlineHtml,
-        });
       }
-      return;
-    }
-
-    // Figures / Images with captions
-    if (tagName === 'figure') {
-      const $img = $elem.find('img').first();
-      const $caption = $elem.find('figcaption').first();
-      const rawSrc = $img.attr('src') || $img.attr('data-src') || $img.attr('data-lazy-src');
-      const src = resolveUrl(rawSrc, baseUrl);
-      const alt = cleanDecodedText($img.attr('alt') || '');
-      const caption = cleanDecodedText($caption.text() || '');
-
-      if (src) {
-        if (!firstImageUrl) firstImageUrl = src;
-        sections.push({
-          type: 'image',
-          src,
-          alt: alt || caption || 'Article figure',
-          caption,
-        });
-      }
-      return;
-    }
-
-    // Standalone img
-    if (tagName === 'img') {
-      const rawSrc = $elem.attr('src') || $elem.attr('data-src');
-      const src = resolveUrl(rawSrc, baseUrl);
-      const alt = cleanDecodedText($elem.attr('alt') || '');
-
-      if (src) {
-        if (!firstImageUrl) firstImageUrl = src;
-        sections.push({
-          type: 'image',
-          src,
-          alt: alt || 'Article image',
-          caption: '',
-        });
-      }
-      return;
-    }
-
-    // Blockquotes
-    if (tagName === 'blockquote') {
-      const text = cleanDecodedText($elem.text());
-      const cite = cleanDecodedText($elem.find('cite').text());
-      if (text) {
-        sections.push({
-          type: 'quote',
-          content: text,
-          citation: cite,
-        });
-      }
-      return;
-    }
-
-    // Lists (ul, ol)
-    if (tagName === 'ul' || tagName === 'ol') {
-      const items = [];
-      $elem.find('li').each((__, li) => {
-        const itemText = cleanDecodedText($(li).text());
-        if (itemText) items.push(itemText);
-      });
-
-      if (items.length > 0) {
-        sections.push({
-          type: 'list',
-          ordered: tagName === 'ol',
-          items,
-        });
-      }
-    }
-  });
+    });
 
   // 3. Assemble clean normalized HTML from extracted sections
   const cleanHtmlParts = sections.map((sec) => {
@@ -322,7 +390,7 @@ export function cleanHtmlAndExtractSections(rawHtml, baseUrl = '') {
         return `<blockquote><p>${heEscape(sec.content)}</p>${sec.citation ? `<cite>${heEscape(sec.citation)}</cite>` : ''}</blockquote>`;
       case 'list': {
         const tag = sec.ordered ? 'ol' : 'ul';
-        const lis = sec.items.map((it) => `<li>${heEscape(it)}</li>`).join('');
+        const lis = (sec.items || []).map((it) => `<li>${heEscape(it)}</li>`).join('');
         return `<${tag}>${lis}</${tag}>`;
       }
       default:
@@ -330,11 +398,37 @@ export function cleanHtmlAndExtractSections(rawHtml, baseUrl = '') {
     }
   });
 
+  const extractedParagraphs = sections.filter((s) => s.type === 'paragraph').length;
+  const extractedHeadings = sections.filter((s) => s.type === 'heading').length;
+  const extractedImages = sections.filter((s) => s.type === 'image').length;
+  const extractedQuotes = sections.filter((s) => s.type === 'quote').length;
+  const extractedLists = sections.filter((s) => s.type === 'list').length;
+
+  const validation = {
+    isComplete: true,
+    sourceBlocks: {
+      paragraphs: sourceParagraphs,
+      headings: sourceHeadings,
+      images: sourceImages,
+      quotes: sourceQuotes,
+      lists: sourceLists,
+    },
+    extractedBlocks: {
+      paragraphs: extractedParagraphs,
+      headings: extractedHeadings,
+      images: extractedImages,
+      quotes: extractedQuotes,
+      lists: extractedLists,
+    },
+    potentialMissingParagraphs: Math.max(0, sourceParagraphs - extractedParagraphs),
+  };
+
   return {
     cleanHtml: cleanHtmlParts.join('\n'),
     sections,
     summary,
     firstImageUrl,
+    validation,
   };
 }
 
@@ -364,39 +458,57 @@ function heEscape(str) {
  *   summary: string,
  *   thumbnail: string,
  *   cleanHtml: string,
- *   sections: Array<any>
+ *   sections: Array<any>,
+ *   validation?: object
  * }}
  */
 export function extractArticleFromWebpage(html, pageUrl) {
+  if (!html || typeof html !== 'string') {
+    return {
+      title: 'Untitled Article',
+      author: 'Editorial Staff',
+      date: new Date().toISOString(),
+      category: 'Feature',
+      summary: '',
+      thumbnail: '',
+      cleanHtml: '',
+      sections: [],
+    };
+  }
+
   const $ = cheerio.load(html);
-  const parsedUrl = new URL(pageUrl);
-  const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}`;
+  const baseUrl = pageUrl || '';
 
-  // Metadata Extraction
-  const ogTitle = $('meta[property="og:title"]').attr('content');
-  const twitterTitle = $('meta[name="twitter:title"]').attr('content');
-  const tagTitle = $('title').text();
-  const h1Title = $('h1').first().text();
-  const title = cleanDecodedText(ogTitle || twitterTitle || h1Title || tagTitle);
+  // Extract Metadata
+  const ogTitle =
+    $('meta[property="og:title"]').attr('content') ||
+    $('meta[name="twitter:title"]').attr('content') ||
+    $('title').text();
+  const rawH1 = $('h1').first().text();
+  const title =
+    cleanDecodedText(ogTitle || rawH1 || '')
+      .split('|')[0]
+      .split('–')[0]
+      .split('—')[0]
+      .trim() || 'Untitled Article';
 
-  const metaAuthor =
+  const ogAuthor =
     $('meta[name="author"]').attr('content') ||
     $('meta[property="article:author"]').attr('content') ||
-    $('meta[name="twitter:creator"]').attr('content') ||
-    $('[rel="author"]').first().text() ||
-    $('.author-name, .byline, .author').first().text();
-  const author = cleanDecodedText(metaAuthor) || 'Editorial Staff';
+    $('.author, .byline, [rel="author"]').first().text();
+  const author = cleanDecodedText(ogAuthor) || 'Editorial Staff';
 
-  const metaDate =
+  const ogDate =
     $('meta[property="article:published_time"]').attr('content') ||
-    $('meta[name="publish-date"]').attr('content') ||
     $('time[datetime]').first().attr('datetime') ||
     $('time').first().text();
-  const date = metaDate ? new Date(metaDate).toISOString() : new Date().toISOString();
+  const date = ogDate ? new Date(ogDate).toISOString() : new Date().toISOString();
 
   const ogImage =
     $('meta[property="og:image"]').attr('content') ||
-    $('meta[name="twitter:image"]').attr('content');
+    $('meta[name="twitter:image"]').attr('content') ||
+    $('link[rel="image_src"]').attr('href') ||
+    '';
   const thumbnail = resolveUrl(ogImage, baseUrl);
 
   const ogSection =
@@ -433,7 +545,6 @@ export function extractArticleFromWebpage(html, pageUrl) {
     }
   }
 
-  // Fallback to body if no container matched
   if (!rawContentHtml) {
     rawContentHtml = $('body').html() || html;
   }
@@ -449,5 +560,6 @@ export function extractArticleFromWebpage(html, pageUrl) {
     thumbnail: thumbnail || parsedContent.firstImageUrl,
     cleanHtml: parsedContent.cleanHtml,
     sections: parsedContent.sections,
+    validation: parsedContent.validation,
   };
 }

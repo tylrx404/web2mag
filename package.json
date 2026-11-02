@@ -4,10 +4,10 @@
   "private": true,
   "description": "Web2Mag — Web-to-PDF Magazine Layout and Editor Dashboard",
   "scripts": {
-    "start:server": "npm --prefix server start",
-    "start:frontend": "npm --prefix frontend run dev",
-    "build": "npm --prefix frontend run build",
-    "lint": "npm --prefix frontend run lint",
-    "test": "npm --prefix server test && npm --prefix frontend test"
+    "start:server": "cd server && npm start",
+    "start:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "lint": "cd frontend && npm run lint",
+    "test": "cd server && npm test && cd ../frontend && npm test"
   }
 }

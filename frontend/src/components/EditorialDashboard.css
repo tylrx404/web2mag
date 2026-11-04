@@ -1,0 +1,611 @@
+/* ==========================================================================
+   EditorialDashboard.css — Premium Editorial Studio Styling
+   Palette: Deep Navy (#0a1128), Warm White (#f8fafc), Electric Blue (#2563eb)
+   ========================================================================== */
+
+.editorial-dashboard {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px 64px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   1. Hero Section & Importer
+   -------------------------------------------------------------------------- */
+.dashboard-hero {
+  position: relative;
+  background: linear-gradient(135deg, #0a1128 0%, #0f1c3f 100%);
+  color: #f8fafc;
+  border-radius: 16px;
+  padding: 48px 40px;
+  box-shadow: 0 12px 32px -8px rgba(10, 17, 40, 0.28), 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.dashboard-hero::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.18) 0%, rgba(37, 99, 235, 0) 70%);
+  pointer-events: none;
+}
+
+.dashboard-hero__content {
+  position: relative;
+  z-index: 1;
+  max-width: 860px;
+}
+
+.dashboard-hero__eyebrow {
+  display: inline-block;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #93c5fd;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.dashboard-hero__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #ffffff;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.015em;
+}
+
+.dashboard-hero__subtitle {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #cbd5e1;
+  margin: 0 0 32px 0;
+  max-width: 680px;
+}
+
+/* Importer Bar */
+.importer-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  padding: 6px 8px 6px 16px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.importer-bar__input-wrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 12px;
+  position: relative;
+}
+
+.importer-bar__icon {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.importer-bar__input {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  color: #0f172a;
+  background: transparent;
+  padding: 8px 0;
+}
+
+.importer-bar__input::placeholder {
+  color: #94a3b8;
+}
+
+.importer-bar__clear-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0 8px;
+}
+
+.importer-bar__clear-btn:hover {
+  color: #475569;
+}
+
+.importer-bar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+}
+
+.importer-bar__btn:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.importer-bar__btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.importer-bar__btn--loading {
+  background: #1e40af;
+}
+
+.importer-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 6px;
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+/* Quick pills */
+.importer-quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.importer-quick__label {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.importer-quick__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.importer-quick__pill {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e2e8f0;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.importer-quick__pill:hover {
+  background: rgba(37, 99, 235, 0.28);
+  border-color: #60a5fa;
+  color: #ffffff;
+}
+
+.importer-quick__pill--active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   2. Issue Metadata Strip
+   -------------------------------------------------------------------------- */
+.issue-meta-strip {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 18px 28px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.issue-meta-strip__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.issue-meta-strip__badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #2563eb;
+  margin-bottom: 4px;
+}
+
+.issue-meta-strip__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0a1128;
+  margin: 0 0 4px 0;
+}
+
+.issue-meta-strip__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.issue-meta-strip__divider {
+  color: #cbd5e1;
+}
+
+.issue-meta-strip__issn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: #475569;
+}
+
+.issue-meta-strip__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons System
+   -------------------------------------------------------------------------- */
+.dashboard-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.dashboard-btn--primary {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.dashboard-btn--primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.dashboard-btn--secondary {
+  background: #f1f5f9;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+}
+
+.dashboard-btn--secondary:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.dashboard-btn--outline {
+  background: #ffffff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.dashboard-btn--outline:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+
+.dashboard-btn--danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  padding: 8px 10px;
+}
+
+.dashboard-btn--danger:hover {
+  background: #fecaca;
+}
+
+.dashboard-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dashboard-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: dashboardSpin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes dashboardSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. Stories and Projects Section
+   -------------------------------------------------------------------------- */
+.dashboard-stories {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dashboard-stories__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 14px;
+}
+
+.dashboard-stories__title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.dashboard-stories__heading {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0a1128;
+  margin: 0;
+}
+
+.dashboard-stories__count {
+  font-size: 12.5px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Grid of Stories */
+.stories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 24px;
+}
+
+.story-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+}
+
+.story-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -4px rgba(10, 17, 40, 0.12);
+  border-color: #cbd5e1;
+}
+
+.story-card--selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.story-card__thumb-frame {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  background: #0a1128;
+  overflow: hidden;
+}
+
+.story-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.story-card:hover .story-card__img {
+  transform: scale(1.03);
+}
+
+.story-card__no-thumb {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.story-card__badges {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.story-card__badge {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.story-card__badge--status {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.story-card__badge--spread {
+  background: rgba(10, 17, 40, 0.85);
+  color: #f8fafc;
+  backdrop-filter: blur(4px);
+}
+
+.story-card__body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.story-card__meta-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.story-card__category {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #2563eb;
+  text-transform: uppercase;
+}
+
+.story-card__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #0a1128;
+  margin: 0 0 8px 0;
+}
+
+.story-card__byline {
+  font-size: 12.5px;
+  color: #475569;
+  margin: 0 0 12px 0;
+}
+
+.story-card__summary {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #64748b;
+  margin: 0 0 16px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.story-card__source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #64748b;
+  text-decoration: none;
+  margin-bottom: 20px;
+  word-break: break-all;
+}
+
+.story-card__source-link:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.story-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.story-card__edit-btn {
+  flex: 1;
+  justify-content: center;
+}
+
+/* --------------------------------------------------------------------------
+   4. Empty State
+   -------------------------------------------------------------------------- */
+.dashboard-empty {
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  padding: 64px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+.dashboard-empty__icon {
+  color: #94a3b8;
+  margin-bottom: 16px;
+}
+
+.dashboard-empty__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0a1128;
+  margin: 0 0 8px 0;
+}
+
+.dashboard-empty__text {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+  max-width: 440px;
+}
+
+.dashboard-empty__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}

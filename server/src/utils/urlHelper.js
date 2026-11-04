@@ -1,4 +1,5 @@
-import he from 'he';
+import * as heModule from 'he';
+const he = heModule.default || heModule;
 
 /**
  * Validates and parses an input URL string.

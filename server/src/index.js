@@ -3,13 +3,21 @@ import cors from 'cors';
 import { pathToFileURL } from 'node:url';
 import articlesRouter from './routes/articles.js';
 import exportRouter from './routes/exportRoutes.js';
+import issueRoutes from './routes/issueRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Middlewares
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(
+  cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -20,11 +28,20 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Article import endpoints
+// Article endpoints (import, sample, export-pdf)
 app.use('/api/articles', articlesRouter);
+
+// Magazine Issue database endpoints
+app.use('/api/issues', issueRoutes);
 
 // Magazine PDF export endpoints
 app.use('/api/export', exportRouter);
+
+// Direct alias for /api/pdf/export
+app.post('/api/pdf/export', (req, res, next) => {
+  req.url = '/export-pdf';
+  articlesRouter(req, res, next);
+});
 
 // Fallback 404 handler
 app.use((req, res) => {
@@ -37,7 +54,7 @@ app.use((err, req, res, _next) => {
   console.error('[Web2Mag Server Error]:', err);
   if (err.type === 'entity.too.large' || err.status === 413) {
     return res.status(413).json({
-      error: 'Export payload exceeds maximum allowable limit of 10MB. Reduce image sizes or split issues.',
+      error: 'Export payload exceeds maximum allowable limit of 50MB. Reduce image sizes or split issues.',
     });
   }
   const statusCode = err.status || err.statusCode || 500;

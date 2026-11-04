@@ -147,7 +147,7 @@ export async function validateSafeUrl(rawUrl, options = {}) {
       return {
         isValid: false,
         parsedUrl: null,
-        error: `DNS lookup failed for host "${hostname}": ${dnsErr.message}`,
+        error: `Could not reach target host (DNS lookup failed for host "${hostname}"): ${dnsErr.message} network address not found.`, 
       };
     }
   }

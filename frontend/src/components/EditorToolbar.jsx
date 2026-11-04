@@ -3,36 +3,7 @@ import './EditorToolbar.css';
 
 /**
  * Top interactive WYSIWYG formatting toolbar for Web2Mag.
- * Houses text formatting (bold, italic, underline, alignment),
- * image controls (upload, resize, alignment, caption),
- * and page management actions.
- *
- * @param {{
- *   isEditMode: boolean,
- *   onToggleEditMode: () => void,
- *   columnMode: 'two-column' | 'single-column',
- *   onToggleColumnMode: (mode: 'two-column' | 'single-column') => void,
- *   zoomLevel: number,
- *   onZoomChange: (delta: number) => void,
- *   onZoomReset: () => void,
- *   onPrint: () => void,
- *   selectedElement: any,
- *   onFormatText: (command: string, value?: string) => void,
- *   onImageWidthChange: (width: string) => void,
- *   onImageAlignmentChange: (align: string) => void,
- *   onUploadImageFile: (file: File) => void,
- *   onDeleteSelectedImage: () => void,
- *   activePageNumber: number,
- *   totalPages: number,
- *   onMovePageUp: (pageNumber: number) => void,
- *   onMovePageDown: (pageNumber: number) => void,
- *   onAddBlankPage: () => void,
- *   onDeletePageClick: (pageNumber: number) => void,
- *   hasUnsavedChanges?: boolean,
- *   onExportPdf?: () => void,
- *   isExporting?: boolean,
- *   exportProgressText?: string
- * }} props
+ * Houses text formatting, image controls, page management, and navigation actions.
  */
 export function EditorToolbar({
   isEditMode,
@@ -59,11 +30,16 @@ export function EditorToolbar({
   onExportPdf,
   isExporting = false,
   exportProgressText = 'Exporting...',
+  onBackToDashboard,
+  onOpenPreview,
+  onOpenSettings,
 }) {
   const fileInputRef = useRef(null);
 
   const isImageSelected =
-    selectedElement?.type === 'image' || selectedElement?.type === 'hero-image';
+    selectedElement?.type === 'image' ||
+    selectedElement?.type === 'hero-image' ||
+    selectedElement?.type === 'cover-image';
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -79,7 +55,6 @@ export function EditorToolbar({
 
   return (
     <div className="editor-toolbar" role="toolbar" aria-label="Magazine Editor Controls">
-      {/* Hidden file input for uploading custom images */}
       <input
         ref={fileInputRef}
         type="file"
@@ -89,6 +64,32 @@ export function EditorToolbar({
       />
 
       <div className="editor-toolbar__section">
+        {/* Exit to Dashboard */}
+        {onBackToDashboard && (
+          <button
+            type="button"
+            className="editor-btn editor-btn--back"
+            onClick={onBackToDashboard}
+            title="Return to Publications Dashboard"
+          >
+            <svg
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              width="14"
+              height="14"
+            >
+              <polyline points="10 13 5 8 10 3" />
+            </svg>
+            <span>Dashboard</span>
+          </button>
+        )}
+
+        <div className="editor-toolbar__divider" aria-hidden="true" />
+
         {/* Mode Switcher */}
         <div className="editor-toolbar__group">
           <button
@@ -103,6 +104,8 @@ export function EditorToolbar({
               stroke="currentColor"
               strokeWidth="1.5"
               aria-hidden="true"
+              width="14"
+              height="14"
             >
               <path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z" />
             </svg>
@@ -157,7 +160,7 @@ export function EditorToolbar({
             title="Align Left"
             aria-label="Align Left"
           >
-            <svg viewBox="0 0 16 16" fill="currentColor">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13">
               <rect x="2" y="3" width="12" height="1.5" rx="0.5" />
               <rect x="2" y="7" width="8" height="1.5" rx="0.5" />
               <rect x="2" y="11" width="10" height="1.5" rx="0.5" />
@@ -170,7 +173,7 @@ export function EditorToolbar({
             title="Align Center"
             aria-label="Align Center"
           >
-            <svg viewBox="0 0 16 16" fill="currentColor">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13">
               <rect x="2" y="3" width="12" height="1.5" rx="0.5" />
               <rect x="4" y="7" width="8" height="1.5" rx="0.5" />
               <rect x="3" y="11" width="10" height="1.5" rx="0.5" />
@@ -183,7 +186,7 @@ export function EditorToolbar({
             title="Justify (Standard Magazine Columns)"
             aria-label="Justify Columns"
           >
-            <svg viewBox="0 0 16 16" fill="currentColor">
+            <svg viewBox="0 0 16 16" fill="currentColor" width="13" height="13">
               <rect x="2" y="3" width="12" height="1.5" rx="0.5" />
               <rect x="2" y="7" width="12" height="1.5" rx="0.5" />
               <rect x="2" y="11" width="12" height="1.5" rx="0.5" />
@@ -193,7 +196,7 @@ export function EditorToolbar({
 
         <div className="editor-toolbar__divider" aria-hidden="true" />
 
-        {/* Image Management Tools (Active when an image is clicked or selected) */}
+        {/* Image Management Tools */}
         <div className={`editor-toolbar__group ${isImageSelected ? 'editor-toolbar__group--highlight' : ''}`}>
           <button
             type="button"
@@ -201,7 +204,7 @@ export function EditorToolbar({
             onClick={handleUploadBtnClick}
             title="Upload custom image from computer"
           >
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
               <rect x="2" y="2" width="12" height="12" rx="2" />
               <circle cx="5.5" cy="5.5" r="1.5" />
               <path d="M14 11l-4-4-5 5" />
@@ -283,17 +286,21 @@ export function EditorToolbar({
 
       {/* Right Group: Page Actions & View Controls */}
       <div className="editor-toolbar__section">
-        {/* Page Position Indicator & Quick Reorder */}
+        {/* Page Position Indicator & Quick Navigation */}
         <div className="editor-toolbar__group">
           <span className="editor-toolbar__page-indicator">
-            Page {activePageNumber} of {totalPages}
+            {activePageNumber === 1
+              ? 'Cover (1)'
+              : activePageNumber === 2
+              ? 'Contents (2)'
+              : `Page ${activePageNumber} of ${totalPages}`}
           </span>
           <button
             type="button"
             className="editor-btn editor-btn--icon"
             onClick={() => onMovePageUp(activePageNumber)}
-            disabled={activePageNumber <= 1}
-            title="Move this page up"
+            disabled={activePageNumber <= 3}
+            title="Move interior page up"
           >
             ↑
           </button>
@@ -301,8 +308,8 @@ export function EditorToolbar({
             type="button"
             className="editor-btn editor-btn--icon"
             onClick={() => onMovePageDown(activePageNumber)}
-            disabled={activePageNumber >= totalPages}
-            title="Move this page down"
+            disabled={activePageNumber >= totalPages || activePageNumber <= 2}
+            title="Move interior page down"
           >
             ↓
           </button>
@@ -310,16 +317,16 @@ export function EditorToolbar({
             type="button"
             className="editor-btn"
             onClick={onAddBlankPage}
-            title="Insert a blank A4 page"
+            title="Insert a blank A4 spread"
           >
-            + Blank Page
+            + Blank Spread
           </button>
           <button
             type="button"
             className="editor-btn editor-btn--danger"
             onClick={() => onDeletePageClick(activePageNumber)}
-            disabled={totalPages <= 1}
-            title="Delete current page"
+            disabled={totalPages <= 3 || activePageNumber <= 2}
+            title="Delete current interior page"
           >
             Delete Page
           </button>
@@ -333,7 +340,7 @@ export function EditorToolbar({
             type="button"
             className={`editor-btn ${columnMode === 'two-column' ? 'editor-btn--active' : ''}`}
             onClick={() => onToggleColumnMode('two-column')}
-            title="2-Column symmetric magazine layout"
+            title="2-Column balanced editorial layout"
           >
             2-Col
           </button>
@@ -374,48 +381,6 @@ export function EditorToolbar({
             +
           </button>
         </div>
-
-        {/* Browser Print Fallback */}
-        <button
-          type="button"
-          className="editor-btn"
-          onClick={onPrint}
-          title="Print using browser dialog"
-        >
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <polyline points="4 5 4 2 12 2 12 5" />
-            <path d="M4 11H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-1" />
-            <rect x="4" y="9" width="8" height="5" rx="1" />
-          </svg>
-          <span>Print</span>
-        </button>
-
-        {/* Server Puppeteer Export PDF Button */}
-        <button
-          type="button"
-          className={`editor-btn editor-btn--export ${
-            isExporting ? 'editor-btn--loading' : ''
-          }`}
-          onClick={onExportPdf}
-          disabled={isExporting}
-          title="Export high-resolution multi-page A4 PDF using Headless Chrome"
-        >
-          {isExporting ? (
-            <>
-              <span className="editor-btn__spinner" aria-hidden="true" />
-              <span>{exportProgressText || 'Generating...'}</span>
-            </>
-          ) : (
-            <>
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M9 2H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6l-4-4z" />
-                <polyline points="9 2 9 6 13 6" />
-                <path d="M8 8v4m-2-2 2 2 2-2" />
-              </svg>
-              <span>Export PDF</span>
-            </>
-          )}
-        </button>
       </div>
     </div>
   );

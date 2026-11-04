@@ -1,8 +1,9 @@
+import { useState } from 'react';
+
 /**
  * Renders an individual A4 magazine page sheet (Page X of Y)
  * Supports WYSIWYG text editing, image selection, resizing, alignment, and drag-drop upload.
  */
-
 export function MagazinePage({
   article,
   pageNumber,
@@ -13,6 +14,7 @@ export function MagazinePage({
   sections = [],
   sourceDomain = 'entechonline.com',
   isEditable = true,
+  hideHeroThumbnail = false,
   selectedElementId = null,
   onSelectElement,
   onUpdateTitle,
@@ -25,6 +27,12 @@ export function MagazinePage({
   const categoryLabel = (article.category || 'FEATURE FOCUS').toUpperCase();
   const authorName = article.author || 'Editorial Staff';
   const issueDate = article.formattedDate || 'Recent Issue';
+
+  // Strictly omit any interior image that repeats the main cover thumbnail
+  const thumbUrl = (article.thumbnail || '').trim();
+  const renderedSections = hideHeroThumbnail && thumbUrl
+    ? sections.filter((s) => !(s.type === 'image' && s.src && s.src.trim() === thumbUrl))
+    : sections;
 
   return (
     <article
@@ -136,8 +144,8 @@ export function MagazinePage({
             </div>
           )}
 
-          {/* Editable Featured Hero Figure */}
-          {article.thumbnail && (
+          {/* Editable Featured Hero Figure — Only when NOT already displayed on Cover */}
+          {!hideHeroThumbnail && article.thumbnail && (
             <figure
               className={`magazine-featured-figure ${
                 isEditable ? 'magazine-editable-figure' : ''
@@ -198,7 +206,7 @@ export function MagazinePage({
         }`}
         style={columnHeight ? { maxHeight: `${columnHeight}px` } : undefined}
       >
-        {sections.map((sec, idx) => (
+        {renderedSections.map((sec, idx) => (
           <RenderSectionItem
             key={`sec-${pageNumber}-${idx}`}
             section={sec}
@@ -213,11 +221,11 @@ export function MagazinePage({
         ))}
       </div>
 
-      {/* Running Footer with Dynamic "Page X of Y" Numbering */}
+      {/* Running Footer */}
       <footer className="magazine-footer">
         <div className="magazine-footer__left">
-          <span>
-            © 2023–2026 www.{sourceDomain} • All rights reserved
+          <span className="magazine-footer__copyright">
+            © {new Date().getFullYear()} www.{sourceDomain} • All rights reserved
           </span>
         </div>
         <div className="magazine-footer__center">
@@ -268,7 +276,9 @@ function RenderSectionItem({
             })
           }
           onBlur={(e) =>
-            onUpdateSection?.(sectionIndex, { content: e.currentTarget.innerText.trim() })
+            onUpdateSection?.(sectionIndex, {
+              content: e.currentTarget.innerText.trim(),
+            })
           }
         >
           {section.content}
@@ -281,9 +291,11 @@ function RenderSectionItem({
         <p
           contentEditable={isEditable}
           suppressContentEditableWarning
-          className={`magazine-paragraph ${isFirstParagraph ? 'magazine-paragraph--lead' : ''} ${
-            isEditable ? 'magazine-editable-text' : ''
-          } ${selectedElementId === secKey ? 'magazine-editable-text--active' : ''}`}
+          className={`magazine-paragraph ${
+            isFirstParagraph ? 'magazine-paragraph--lead' : ''
+          } ${isEditable ? 'magazine-editable-text' : ''} ${
+            selectedElementId === secKey ? 'magazine-editable-text--active' : ''
+          }`}
           onFocus={() =>
             onSelectElement?.({
               id: secKey,
@@ -291,32 +303,28 @@ function RenderSectionItem({
               sectionIndex,
             })
           }
-          onBlur={(e) => {
-            const newHtml = e.currentTarget.innerHTML;
-            const newText = e.currentTarget.innerText.trim();
-            onUpdateSection?.(sectionIndex, { content: newText, html: newHtml });
-          }}
+          onBlur={(e) =>
+            onUpdateSection?.(sectionIndex, {
+              content: e.currentTarget.innerText.trim(),
+              html: e.currentTarget.innerHTML,
+            })
+          }
           dangerouslySetInnerHTML={
-            section.html && !section.isSplitPart ? { __html: section.html } : undefined
+            section.html ? { __html: section.html } : undefined
           }
         >
-          {section.html && !section.isSplitPart ? undefined : section.content}
+          {!section.html ? section.content : undefined}
         </p>
       );
     }
 
     case 'image': {
-      if (!section.src) return null;
       return (
         <figure
           className={`magazine-inline-figure ${
             isEditable ? 'magazine-editable-figure' : ''
           } ${selectedElementId === secKey ? 'magazine-editable-figure--active' : ''}`}
-          style={{
-            textAlign: section.align || 'center',
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
+          onClick={() =>
             onSelectElement?.({
               id: secKey,
               type: 'image',
@@ -324,9 +332,8 @@ function RenderSectionItem({
               src: section.src,
               width: section.width || '100%',
               align: section.align || 'center',
-              caption: section.caption || '',
-            });
-          }}
+            })
+          }
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
@@ -336,9 +343,8 @@ function RenderSectionItem({
         >
           <img
             src={section.src}
-            alt={section.alt || 'Editorial figure'}
+            alt={section.alt || section.caption || 'Magazine illustration'}
             className="magazine-inline-figure__img"
-            loading="lazy"
             style={{
               width: section.width || '100%',
               margin:
@@ -349,20 +355,22 @@ function RenderSectionItem({
                   : '0 auto',
             }}
           />
-          <figcaption
-            contentEditable={isEditable}
-            suppressContentEditableWarning
-            className={`magazine-inline-figure__caption ${
-              isEditable ? 'magazine-editable-text' : ''
-            }`}
-            onBlur={(e) =>
-              onUpdateSection?.(sectionIndex, {
-                caption: e.currentTarget.innerText.trim(),
-              })
-            }
-          >
-            {section.caption || 'Figure: Editorial illustration'}
-          </figcaption>
+          {section.caption && (
+            <figcaption
+              contentEditable={isEditable}
+              suppressContentEditableWarning
+              className={`magazine-inline-figure__caption ${
+                isEditable ? 'magazine-editable-text' : ''
+              }`}
+              onBlur={(e) =>
+                onUpdateSection?.(sectionIndex, {
+                  caption: e.currentTarget.innerText.trim(),
+                })
+              }
+            >
+              {section.caption}
+            </figcaption>
+          )}
         </figure>
       );
     }
@@ -370,7 +378,7 @@ function RenderSectionItem({
     case 'quote': {
       return (
         <blockquote
-          className={`magazine-pull-quote ${
+          className={`magazine-pullquote ${
             isEditable ? 'magazine-editable-box' : ''
           } ${selectedElementId === secKey ? 'magazine-editable-box--active' : ''}`}
           onFocus={() =>
@@ -384,23 +392,33 @@ function RenderSectionItem({
           <p
             contentEditable={isEditable}
             suppressContentEditableWarning
-            className={`magazine-pull-quote__text ${isEditable ? 'magazine-editable-text' : ''}`}
+            className={`magazine-pullquote__text ${
+              isEditable ? 'magazine-editable-text' : ''
+            }`}
             onBlur={(e) =>
-              onUpdateSection?.(sectionIndex, { content: e.currentTarget.innerText.trim() })
+              onUpdateSection?.(sectionIndex, {
+                content: e.currentTarget.innerText.trim(),
+              })
             }
           >
-            {section.content}
+            "{section.content}"
           </p>
-          <cite
-            contentEditable={isEditable}
-            suppressContentEditableWarning
-            className={`magazine-pull-quote__cite ${isEditable ? 'magazine-editable-text' : ''}`}
-            onBlur={(e) =>
-              onUpdateSection?.(sectionIndex, { citation: e.currentTarget.innerText.trim() })
-            }
-          >
-            {section.citation ? `— ${section.citation}` : '— Editorial note'}
-          </cite>
+          {section.citation && (
+            <cite
+              contentEditable={isEditable}
+              suppressContentEditableWarning
+              className={`magazine-pullquote__cite ${
+                isEditable ? 'magazine-editable-text' : ''
+              }`}
+              onBlur={(e) =>
+                onUpdateSection?.(sectionIndex, {
+                  citation: e.currentTarget.innerText.trim(),
+                })
+              }
+            >
+              — {section.citation}
+            </cite>
+          )}
         </blockquote>
       );
     }
@@ -409,16 +427,18 @@ function RenderSectionItem({
       const ListTag = section.ordered ? 'ol' : 'ul';
       return (
         <ListTag className="magazine-list">
-          {section.items?.map((item, i) => (
+          {(section.items || []).map((item, i) => (
             <li
               key={i}
               contentEditable={isEditable}
               suppressContentEditableWarning
-              className={`magazine-list__item ${isEditable ? 'magazine-editable-text' : ''}`}
+              className={`magazine-list__item ${
+                isEditable ? 'magazine-editable-text' : ''
+              }`}
               onBlur={(e) => {
-                const newItems = [...(section.items || [])];
-                newItems[i] = e.currentTarget.innerText.trim();
-                onUpdateSection?.(sectionIndex, { items: newItems });
+                const nextItems = [...(section.items || [])];
+                nextItems[i] = e.currentTarget.innerText.trim();
+                onUpdateSection?.(sectionIndex, { items: nextItems });
               }}
             >
               {item}
@@ -426,6 +446,10 @@ function RenderSectionItem({
           ))}
         </ListTag>
       );
+    }
+
+    case 'divider': {
+      return <hr className="magazine-divider" />;
     }
 
     default:

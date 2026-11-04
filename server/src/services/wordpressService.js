@@ -55,26 +55,42 @@ async function discoverRestApiRoot(parsedUrl) {
 
 /**
  * Attempts to fetch a WordPress post via the WordPress REST API using the slug.
+ * Accepts either a URL instance or a probe configuration object.
  *
- * @param {URL} parsedUrl
+ * @param {URL | { parsedUrl: URL, restApiRoot?: string, directPostEndpoint?: string }} target
  * @returns {Promise<{
  *   isWordPress: boolean,
+ *   success?: boolean,
  *   post?: any,
  *   error?: string
  * }>}
  */
-export async function fetchWordPressPost(parsedUrl) {
-  const slug = extractSlugFromUrl(parsedUrl);
+export async function fetchWordPressPost(target) {
+  let parsedUrl = target;
+  let directEndpoint = null;
+  let restApiRoot = null;
 
-  if (!slug) {
+  if (target && typeof target === 'object' && !(target instanceof URL)) {
+    parsedUrl = target.parsedUrl;
+    directEndpoint = target.directPostEndpoint;
+    restApiRoot = target.restApiRoot;
+  }
+
+  const slug = parsedUrl ? extractSlugFromUrl(parsedUrl) : '';
+
+  if (!directEndpoint && !slug) {
     return {
       isWordPress: false,
+      success: false,
       error: 'Could not extract article slug from the provided URL.',
     };
   }
 
-  const apiRoot = await discoverRestApiRoot(parsedUrl);
-  const postsEndpoint = `${apiRoot}/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed`;
+  let postsEndpoint = directEndpoint;
+  if (!postsEndpoint) {
+    const apiRoot = restApiRoot || (await discoverRestApiRoot(parsedUrl));
+    postsEndpoint = `${apiRoot}/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed`;
+  }
 
   try {
     const res = await fetch(postsEndpoint, {
@@ -85,6 +101,7 @@ export async function fetchWordPressPost(parsedUrl) {
     if (!res.ok) {
       return {
         isWordPress: false,
+        success: false,
         error: `WordPress REST API responded with status ${res.status} (${res.statusText}).`,
       };
     }
@@ -93,21 +110,22 @@ export async function fetchWordPressPost(parsedUrl) {
     if (!contentType.includes('application/json')) {
       return {
         isWordPress: false,
+        success: false,
         error: 'WordPress REST endpoint did not return JSON data.',
       };
     }
 
-    const posts = await res.json();
+    const data = await res.json();
+    const rawPost = Array.isArray(data) ? data[0] : data;
 
-    if (!Array.isArray(posts) || posts.length === 0) {
+    if (!rawPost || !rawPost.title) {
       return {
         isWordPress: true,
+        success: false,
         post: null,
         error: `No published WordPress post found matching slug "${slug}".`,
       };
     }
-
-    const rawPost = posts[0];
 
     // Extract Author name
     const authorName =
@@ -133,6 +151,7 @@ export async function fetchWordPressPost(parsedUrl) {
 
     return {
       isWordPress: true,
+      success: true,
       post: {
         id: `wp-${rawPost.id}`,
         title: cleanDecodedText(rawPost.title?.rendered || ''),
@@ -142,12 +161,13 @@ export async function fetchWordPressPost(parsedUrl) {
         author: cleanDecodedText(authorName),
         featuredImage: featuredImageUrl,
         category,
-        sourceUrl: rawPost.link || parsedUrl.href,
+        sourceUrl: rawPost.link || parsedUrl?.href || '',
       },
     };
   } catch (err) {
     return {
       isWordPress: false,
+      success: false,
       error: `Network error reaching WordPress API: ${err.message}`,
     };
   }

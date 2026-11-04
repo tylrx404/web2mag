@@ -42,7 +42,8 @@ export function getChromeExecutablePath() {
  * @param {string} title - Article or document title
  * @returns {string} Fully styled HTML string
  */
-export function wrapMagazineInPrintDocument(sheetsHtml, title = 'Web2Mag Publication') {
+export function wrapMagazineInPrintDocument(sheetsHtml, title = 'Web2Mag Publication', options = {}) {
+  const accentColor = options?.accentColor || '#2563eb';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -56,6 +57,11 @@ export function wrapMagazineInPrintDocument(sheetsHtml, title = 'Web2Mag Publica
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet">
 
   <style>
+    :root {
+      --color-navy: #0a1128;
+      --color-accent: ${accentColor || '#2563eb'};
+      --color-neutral: #f8fafc;
+    }
     /* ==========================================================================
        Print-Optimized A4 Magazine Stylesheet for Web2Mag PDF Export
        ========================================================================== */
@@ -279,7 +285,8 @@ export function wrapMagazineInPrintDocument(sheetsHtml, title = 'Web2Mag Publica
 
     .magazine-body--two-col {
       column-count: 2;
-      column-gap: 24px;
+      column-gap: 22px !important;
+      column-rule: 1px solid #e2e8f0 !important;
       column-fill: auto;
       column-rule: 1px solid #edf2f7;
       text-align: justify;
@@ -331,6 +338,9 @@ export function wrapMagazineInPrintDocument(sheetsHtml, title = 'Web2Mag Publica
 
     /* Section Headings */
     .magazine-subheading {
+      font-family: 'Playfair Display', Georgia, serif;
+      break-after: avoid !important;
+      page-break-after: avoid !important;
       color: #0f172a;
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       font-weight: 700;
@@ -517,7 +527,7 @@ function escapeHtml(str) {
  * @param {{ columnMode?: string }} options
  * @returns {string} Standalone HTML document
  */
-export function renderArticleToHtml(article, { columnMode = 'two-column' } = {}) {
+export function renderArticleToHtml(article, { columnMode = 'two-column', includeCover = false, issue = {} } = {}) {
   const title = article.title || 'Untitled Article';
   const categoryLabel = (article.category || 'FEATURE FOCUS').toUpperCase();
   const authorName = article.author || 'Editorial Staff';
@@ -532,7 +542,13 @@ export function renderArticleToHtml(article, { columnMode = 'two-column' } = {})
       })()
     : 'entechonline.com';
 
-  const sections = article.sections || [];
+  const rawThumbnail = (article.thumbnail || '').trim();
+  const rawSections = article.sections || [];
+
+  // If includeCover is true, strictly omit any interior image matching the cover thumbnail
+  const sections = includeCover && rawThumbnail
+    ? rawSections.filter((s) => !(s.type === 'image' && s.src && s.src.trim() === rawThumbnail))
+    : rawSections;
 
   // Group sections into pages (approx 6-8 sections per continuation page, 3-4 for Page 1)
   const pagesData = [];
@@ -560,7 +576,7 @@ export function renderArticleToHtml(article, { columnMode = 'two-column' } = {})
 
   const totalPages = pagesData.length;
 
-  const sheetsHtml = pagesData
+  const interiorSheetsHtml = pagesData
     .map((page) => {
       const isFirst = page.isFirstPage;
       const pageNum = page.pageNumber;
@@ -609,9 +625,9 @@ export function renderArticleToHtml(article, { columnMode = 'two-column' } = {})
         }
 
         ${
-          article.thumbnail
+          (!includeCover && rawThumbnail)
             ? `<figure class="magazine-featured-figure">
-                 <img src="${article.thumbnail}" alt="${escapeHtml(title)}" class="magazine-featured-figure__img" />
+                 <img src="${rawThumbnail}" alt="${escapeHtml(title)}" class="magazine-featured-figure__img" />
                  <figcaption class="magazine-featured-figure__caption">Cover Dispatch &bull; ${escapeHtml(sourceDomain)}</figcaption>
                </figure>`
             : ''
@@ -676,7 +692,40 @@ export function renderArticleToHtml(article, { columnMode = 'two-column' } = {})
     })
     .join('\n');
 
-  return wrapMagazineInPrintDocument(sheetsHtml, title);
+  const coverSheetHtml = includeCover
+    ? `<article class="magazine-sheet magazine-cover ${rawThumbnail ? 'magazine-cover--photo' : 'magazine-cover--typographic'}">
+      ${
+        rawThumbnail
+          ? `<div class="magazine-cover__backdrop">
+               <img src="${rawThumbnail}" alt="" class="magazine-cover__backdrop-img" />
+               <div class="magazine-cover__backdrop-gradient"></div>
+             </div>`
+          : '<div class="magazine-cover__typographic-backdrop"></div>'
+      }
+      <div class="magazine-cover__content">
+        <header class="magazine-cover__header">
+          <div class="magazine-cover__dateline-bar">
+            <span>VOL. ${escapeHtml(issue.volumeNumber || '1')} &bull; NO. ${escapeHtml(issue.issueNumber || '1')}</span>
+            <span>${escapeHtml(issue.publicationDate || issueDate)}</span>
+          </div>
+        </header>
+        <div class="magazine-cover__hero-block">
+          <h1 class="magazine-cover__headline">${escapeHtml(title)}</h1>
+          ${article.summary ? `<p class="magazine-cover__deck">${escapeHtml(article.summary)}</p>` : ''}
+          <div class="magazine-cover__byline-row">
+            <span class="magazine-cover__byline">BY ${escapeHtml(authorName.toUpperCase())}</span>
+          </div>
+        </div>
+        <footer class="magazine-cover__footer">
+          <span>ISSN 2584-2749</span>
+          <span>&copy; ${new Date().getFullYear()} Editorial Edition</span>
+        </footer>
+      </div>
+    </article>`
+    : '';
+
+  const finalSheets = includeCover ? `${coverSheetHtml}\n${interiorSheetsHtml}` : interiorSheetsHtml;
+  return wrapMagazineInPrintDocument(finalSheets, title, { accentColor: issue.accentColor || '#2563eb' });
 }
 
 /**
@@ -723,11 +772,18 @@ export async function generatePdfFromHtml(htmlContent, options = {}) {
       deviceScaleFactor: 2, // 2x device scale for high-DPI raster elements
     });
 
-    // Load the HTML content
-    await page.setContent(htmlContent, {
-      waitUntil: ['load', 'networkidle0'],
-      timeout: 30000,
-    });
+    // Load the HTML content with graceful fallback
+    try {
+      await page.setContent(htmlContent, {
+        waitUntil: 'load',
+        timeout: 10000,
+      });
+    } catch {
+      await page.setContent(htmlContent, {
+        waitUntil: 'domcontentloaded',
+        timeout: 8000,
+      });
+    }
 
     // 1. Wait for Google Web Fonts to fully load into memory before printing
     try {
@@ -736,15 +792,16 @@ export async function generatePdfFromHtml(htmlContent, options = {}) {
       console.warn('[PDF Export] Font ready check warning:', fontErr.message);
     }
 
-    // 2. Wait for all inline images (including base64 data URLs) to complete loading
+    // 2. Wait for inline images (with 3s maximum race to prevent stalls)
     await page.evaluate(async () => {
       const images = Array.from(document.querySelectorAll('img'));
       await Promise.all(
         images.map((img) => {
           if (img.complete) return Promise.resolve();
           return new Promise((resolve) => {
-            img.addEventListener('load', resolve);
-            img.addEventListener('error', resolve); // Don't hang on broken image links
+            const timer = setTimeout(resolve, 3000);
+            img.addEventListener('load', () => { clearTimeout(timer); resolve(); }, { once: true });
+            img.addEventListener('error', () => { clearTimeout(timer); resolve(); }, { once: true });
           });
         })
       );

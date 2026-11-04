@@ -3,6 +3,8 @@ import { COLUMN_WIDTH_PX, useArticlePagination } from '../hooks/useArticlePagina
 import { exportMagazineToPdf } from '../utils/pdfExportClient.js';
 import { DeletePageModal } from './DeletePageModal.jsx';
 import { EditorToolbar } from './EditorToolbar.jsx';
+import { MagazineCover } from './MagazineCover.jsx';
+import { MagazineToc } from './MagazineToc.jsx';
 import { MagazinePage } from './MagazinePage.jsx';
 import { PageThumbnailsSidebar } from './PageThumbnailsSidebar.jsx';
 import './MagazineEditor.css';
@@ -12,21 +14,24 @@ import './MagazineEditor.css';
  * Coordinates page thumbnails, formatting toolbar, in-place contentEditable text editing,
  * image uploading, resizing, alignment, page reordering, adding blank pages, and deletion.
  *
- * @param {{
- *   article: any,
- *   onUpdateArticle: (updatedArticle: any) => void,
- *   onImportClick?: () => void,
- *   renderLibrarySidebar?: React.ReactNode
- * }} props
+ * Page Architecture:
+ * - Sheet 1: Front Cover (MagazineCover) — strictly 1 cover image, no "WEB2MAG MAGAZINE" text
+ * - Sheet 2: Table of Contents (MagazineToc) — real article titles, sections, exact folios
+ * - Sheet 3..N: Interior Spreads (MagazinePage) — no duplicate cover thumbnail, balanced columns
+ * - Naturally targets 5-6 pages for typical real articles!
  */
 export function MagazineEditor({
   article,
   onUpdateArticle,
   onImportClick,
+  onBackToDashboard,
+  onOpenPreview,
+  onOpenSettings,
   renderLibrarySidebar,
+  issueConfig = {},
+  articles = [],
 }) {
   const [isEditMode, setIsEditMode] = useState(true);
-  const [sidebarTab, setSidebarTab] = useState('pages'); // 'pages' | 'library'
   const [activePageNumber, setActivePageNumber] = useState(1);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [columnMode, setColumnMode] = useState('two-column');
@@ -42,15 +47,44 @@ export function MagazineEditor({
 
   const canvasRef = useRef(null);
 
-  const { pages, totalPages, measureContainerRef, onMeasureImageLoad } =
+  const { pages: interiorPages, totalPages: interiorTotalPages, measureContainerRef, onMeasureImageLoad } =
     useArticlePagination({
       article,
       columnMode,
     });
 
-  // Safely clamp active page number without side-effect setState loops
+  // Cover is Page 1, TOC is Page 2, Interior pages are Pages 3..N
+  const totalPublicationPages = interiorPages.length + 2;
+
+  // Safely clamp active page number
   const currentPage =
-    totalPages > 0 ? Math.min(Math.max(activePageNumber, 1), totalPages) : 1;
+    totalPublicationPages > 0
+      ? Math.min(Math.max(activePageNumber, 1), totalPublicationPages)
+      : 1;
+
+  // All pages model for the PageThumbnailsSidebar
+  const allThumbnailsPages = [
+    {
+      pageNumber: 1,
+      type: 'cover',
+      isCover: true,
+      title: 'Front Cover',
+      sections: [],
+    },
+    {
+      pageNumber: 2,
+      type: 'toc',
+      isToc: true,
+      title: 'Table of Contents',
+      sections: [],
+    },
+    ...interiorPages.map((p, idx) => ({
+      ...p,
+      pageNumber: idx + 3,
+      isFirstPage: idx === 0,
+      totalPages: totalPublicationPages,
+    })),
+  ];
 
   if (!article) {
     return (
@@ -73,17 +107,28 @@ export function MagazineEditor({
           </div>
           <h3 className="magazine-empty-state__title">No Article Selected for Editing</h3>
           <p className="magazine-empty-state__desc">
-            Select an article from your library or import a new WordPress URL to start editing with the interactive WYSIWYG editor.
+            Select an article from your library or import a new article URL to start editing with the interactive visual editor.
           </p>
-          {onImportClick && (
-            <button
-              type="button"
-              className="magazine-empty-state__btn"
-              onClick={onImportClick}
-            >
-              Import Article
-            </button>
-          )}
+          <div className="magazine-empty-state__actions">
+            {onImportClick && (
+              <button
+                type="button"
+                className="magazine-empty-state__btn"
+                onClick={onImportClick}
+              >
+                Import Article
+              </button>
+            )}
+            {onBackToDashboard && (
+              <button
+                type="button"
+                className="magazine-empty-state__btn magazine-empty-state__btn--secondary"
+                onClick={onBackToDashboard}
+              >
+                Return to Dashboard
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -149,7 +194,7 @@ export function MagazineEditor({
   const handleImageWidthChange = (width) => {
     if (!selectedElement) return;
 
-    if (selectedElement.type === 'hero-image') {
+    if (selectedElement.type === 'hero-image' || selectedElement.type === 'cover-image') {
       handleUpdateHeroImage({ width });
       setSelectedElement((prev) => ({ ...prev, width }));
     } else if (selectedElement.type === 'image' && selectedElement.sectionIndex >= 0) {
@@ -161,7 +206,7 @@ export function MagazineEditor({
   const handleImageAlignmentChange = (align) => {
     if (!selectedElement) return;
 
-    if (selectedElement.type === 'hero-image') {
+    if (selectedElement.type === 'hero-image' || selectedElement.type === 'cover-image') {
       handleUpdateHeroImage({ align });
       setSelectedElement((prev) => ({ ...prev, align }));
     } else if (selectedElement.type === 'image' && selectedElement.sectionIndex >= 0) {
@@ -176,7 +221,11 @@ export function MagazineEditor({
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target.result;
-      if (selectedElement?.type === 'hero-image' || !selectedElement) {
+      if (
+        selectedElement?.type === 'cover-image' ||
+        selectedElement?.type === 'hero-image' ||
+        !selectedElement
+      ) {
         onUpdateArticle({ ...article, thumbnail: dataUrl });
         setHasUnsavedChanges(true);
       } else if (
@@ -193,7 +242,7 @@ export function MagazineEditor({
   const handleDeleteSelectedImage = () => {
     if (!selectedElement) return;
 
-    if (selectedElement.type === 'hero-image') {
+    if (selectedElement.type === 'hero-image' || selectedElement.type === 'cover-image') {
       onUpdateArticle({ ...article, thumbnail: '' });
       setSelectedElement(null);
       setHasUnsavedChanges(true);
@@ -238,16 +287,17 @@ export function MagazineEditor({
   };
 
   const handleMovePageUp = (pageNum) => {
-    if (pageNum <= 1 || pages.length <= 1) return;
-    const fromIndex = pageNum - 1;
-    const toIndex = pageNum - 2;
+    // Cannot move Cover (1) or TOC (2)
+    if (pageNum <= 3 || interiorPages.length <= 1) return;
 
-    const fromPage = pages[fromIndex];
-    const toPage = pages[toIndex];
+    const interiorFromIndex = pageNum - 3;
+    const interiorToIndex = pageNum - 4;
+
+    const fromPage = interiorPages[interiorFromIndex];
+    const toPage = interiorPages[interiorToIndex];
 
     if (!fromPage || !toPage) return;
 
-    // Swap the sections of the two pages in the master sections list
     const fromSections = fromPage.sections || [];
     const toSections = toPage.sections || [];
 
@@ -262,13 +312,13 @@ export function MagazineEditor({
         ...toSections
       );
       onUpdateArticle({ ...article, sections: nextSections });
-      setActivePageNumber(toIndex + 1);
+      setActivePageNumber(interiorToIndex + 3);
       setHasUnsavedChanges(true);
     }
   };
 
   const handleMovePageDown = (pageNum) => {
-    if (pageNum >= pages.length || pages.length <= 1) return;
+    if (pageNum < 3 || pageNum >= totalPublicationPages || interiorPages.length <= 1) return;
     handleMovePageUp(pageNum + 1);
   };
 
@@ -292,23 +342,24 @@ export function MagazineEditor({
       blankParagraph,
     ];
     onUpdateArticle({ ...article, sections: nextSections });
-    setActivePageNumber(pages.length + 1);
+    setActivePageNumber(totalPublicationPages + 1);
     setHasUnsavedChanges(true);
   };
 
   const handleDeletePageClick = (pageNum) => {
+    if (pageNum <= 2) return; // Cannot delete Cover or TOC
     setPageToDelete(pageNum);
     setIsDeleteModalOpen(true);
   };
 
   const handleConfirmDeletePage = () => {
-    if (pageToDelete === null || pages.length <= 1) {
+    if (pageToDelete === null || pageToDelete <= 2 || interiorPages.length <= 1) {
       setIsDeleteModalOpen(false);
       return;
     }
 
-    const pageIdx = pageToDelete - 1;
-    const targetPage = pages[pageIdx];
+    const interiorIdx = pageToDelete - 3;
+    const targetPage = interiorPages[interiorIdx];
 
     if (targetPage && targetPage.sections) {
       const idsToRemove = new Set(targetPage.sections.map((s) => s.id));
@@ -349,7 +400,6 @@ export function MagazineEditor({
         type: 'success',
         message: `High-resolution A4 PDF exported in ${seconds}s as "${result.filename}"`,
       });
-      // Auto-dismiss success notice after 7 seconds
       setTimeout(() => {
         setExportNotice(null);
       }, 7000);
@@ -372,7 +422,7 @@ export function MagazineEditor({
 
   return (
     <div className="magazine-editor">
-      {/* Top WYSIWYG Formatting & Page Management Toolbar */}
+      {/* Top WYSIWYG Formatting & Navigation Toolbar */}
       <EditorToolbar
         isEditMode={isEditMode}
         onToggleEditMode={() => setIsEditMode(!isEditMode)}
@@ -394,12 +444,15 @@ export function MagazineEditor({
         onUploadImageFile={handleUploadImageFile}
         onDeleteSelectedImage={handleDeleteSelectedImage}
         activePageNumber={currentPage}
-        totalPages={totalPages}
+        totalPages={totalPublicationPages}
         onMovePageUp={handleMovePageUp}
         onMovePageDown={handleMovePageDown}
         onAddBlankPage={handleAddBlankPage}
         onDeletePageClick={handleDeletePageClick}
         hasUnsavedChanges={hasUnsavedChanges}
+        onBackToDashboard={onBackToDashboard}
+        onOpenPreview={onOpenPreview}
+        onOpenSettings={onOpenSettings}
       />
 
       {/* PDF Export Feedback Banner */}
@@ -423,53 +476,18 @@ export function MagazineEditor({
 
       {/* Editor Body Grid: Left Sidebar + Center A4 Canvas */}
       <div className="magazine-editor__body">
-        {/* Left Sidebar with Tab Switching (Pages vs Library) */}
+        {/* Left Sidebar */}
         <aside className="magazine-editor__sidebar">
-          <div className="magazine-editor__sidebar-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={sidebarTab === 'pages'}
-              className={`magazine-editor__sidebar-tab ${
-                sidebarTab === 'pages'
-                  ? 'magazine-editor__sidebar-tab--active'
-                  : ''
-              }`}
-              onClick={() => setSidebarTab('pages')}
-            >
-              <span>Pages ({totalPages})</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={sidebarTab === 'library'}
-              className={`magazine-editor__sidebar-tab ${
-                sidebarTab === 'library'
-                  ? 'magazine-editor__sidebar-tab--active'
-                  : ''
-              }`}
-              onClick={() => setSidebarTab('library')}
-            >
-              <span>Article Library</span>
-            </button>
-          </div>
-
-          <div className="magazine-editor__sidebar-content">
-            {sidebarTab === 'pages' ? (
-              <PageThumbnailsSidebar
-                pages={pages}
-                activePageNumber={currentPage}
-                onSelectPage={handleSelectPage}
-                onMovePageUp={handleMovePageUp}
-                onMovePageDown={handleMovePageDown}
-                onDeletePageClick={handleDeletePageClick}
-                onAddBlankPage={handleAddBlankPage}
-                articleTitle={article.title}
-              />
-            ) : (
-              renderLibrarySidebar
-            )}
-          </div>
+          <PageThumbnailsSidebar
+            pages={allThumbnailsPages}
+            activePageNumber={currentPage}
+            onSelectPage={handleSelectPage}
+            onMovePageUp={handleMovePageUp}
+            onMovePageDown={handleMovePageDown}
+            onDeletePageClick={handleDeletePageClick}
+            onAddBlankPage={handleAddBlankPage}
+            articleTitle={article.title}
+          />
         </aside>
 
         {/* Center Interactive A4 Magazine Canvas */}
@@ -481,100 +499,102 @@ export function MagazineEditor({
               transformOrigin: 'top center',
             }}
           >
-            {pages.map((page) => (
-              <div
-                key={`editor-sheet-${page.pageNumber}`}
-                id={`editor-sheet-${page.pageNumber}`}
-                className={`magazine-editor__sheet-wrapper ${
-                  currentPage === page.pageNumber
-                    ? 'magazine-editor__sheet-wrapper--active'
-                    : ''
-                }`}
-                onClick={() => setActivePageNumber(page.pageNumber)}
-              >
-                <MagazinePage
-                  article={article}
-                  pageNumber={page.pageNumber}
-                  totalPages={totalPages}
-                  isFirstPage={page.isFirstPage}
-                  columnMode={columnMode}
-                  columnHeight={page.columnHeight}
-                  sections={page.sections}
-                  sourceDomain={sourceDomain}
-                  isEditable={isEditMode}
-                  selectedElementId={selectedElement?.id}
-                  onSelectElement={setSelectedElement}
-                  onUpdateTitle={handleUpdateTitle}
-                  onUpdateAuthor={handleUpdateAuthor}
-                  onUpdateSummary={handleUpdateSummary}
-                  onUpdateSection={handleUpdateSection}
-                  onUpdateHeroImage={handleUpdateHeroImage}
-                  onDropImageOnFigure={handleDropImageOnFigure}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Hidden Measurement Sandbox (Offscreen) */}
-      <div
-        ref={measureContainerRef}
-        className="magazine-measurement-sandbox"
-        aria-hidden="true"
-      >
-        <div
-          data-measure="hero-block"
-          className="magazine-hero-block"
-          style={{ width: '658px' }}
-        >
-          <div className="magazine-category-pill">
-            {(article.category || 'FEATURE FOCUS').toUpperCase()}
-          </div>
-          <h1 className="magazine-headline">{article.title}</h1>
-          <div className="magazine-byline-bar">
-            <span>Written By: {article.author || 'Editorial Staff'}</span>
-          </div>
-          {article.summary && (
-            <div className="magazine-standfirst">
-              <p className="magazine-standfirst__text">{article.summary}</p>
-            </div>
-          )}
-          {article.thumbnail && (
-            <figure className="magazine-featured-figure">
-              <img
-                src={article.thumbnail}
-                alt=""
-                className="magazine-featured-figure__img"
-                onLoad={onMeasureImageLoad}
-              />
-            </figure>
-          )}
-        </div>
-
-        <div
-          className="magazine-measurement-column"
-          style={{ width: `${COLUMN_WIDTH_PX}px` }}
-        >
-          {article.sections?.map((sec, idx) => (
+            {/* Sheet 1: Front Cover */}
             <div
-              key={`m-sec-${idx}`}
-              data-measure-section={sec.id || `sec-${idx}`}
+              key="editor-sheet-1"
+              id="editor-sheet-1"
+              className={`magazine-editor__sheet-wrapper ${
+                currentPage === 1 ? 'magazine-editor__sheet-wrapper--active' : ''
+              }`}
+              onClick={() => setActivePageNumber(1)}
             >
-              <RenderMeasurementItem
-                section={sec}
-                onImageLoad={onMeasureImageLoad}
+              <MagazineCover
+                issue={issueConfig}
+                article={article}
+                otherArticles={articles}
+                isEditable={isEditMode}
+                selectedElementId={selectedElement?.id}
+                onSelectElement={setSelectedElement}
+                onUpdateHeadline={handleUpdateTitle}
+                onUpdateAuthor={handleUpdateAuthor}
+                onUpdateDeck={handleUpdateSummary}
+                onUpdateKicker={(kicker) => {
+                  onUpdateArticle({ ...article, category: kicker });
+                  setHasUnsavedChanges(true);
+                }}
+                onUploadCoverImage={(file) => handleUploadImageFile(file)}
+                onRemoveCoverImage={() => {
+                  onUpdateArticle({ ...article, thumbnail: '' });
+                  setHasUnsavedChanges(true);
+                }}
               />
             </div>
-          ))}
+
+            {/* Sheet 2: Table of Contents */}
+            <div
+              key="editor-sheet-2"
+              id="editor-sheet-2"
+              className={`magazine-editor__sheet-wrapper ${
+                currentPage === 2 ? 'magazine-editor__sheet-wrapper--active' : ''
+              }`}
+              onClick={() => setActivePageNumber(2)}
+            >
+              <MagazineToc
+                issue={issueConfig}
+                article={article}
+                articles={articles}
+                pages={interiorPages}
+                totalPages={totalPublicationPages}
+                onSelectPage={handleSelectPage}
+              />
+            </div>
+
+            {/* Sheets 3..N: Article Interior Spreads */}
+            {interiorPages.map((page, idx) => {
+              const pubPageNum = idx + 3;
+              return (
+                <div
+                  key={`editor-sheet-${pubPageNum}`}
+                  id={`editor-sheet-${pubPageNum}`}
+                  className={`magazine-editor__sheet-wrapper ${
+                    currentPage === pubPageNum
+                      ? 'magazine-editor__sheet-wrapper--active'
+                      : ''
+                  }`}
+                  onClick={() => setActivePageNumber(pubPageNum)}
+                >
+                  <MagazinePage
+                    article={article}
+                    pageNumber={pubPageNum}
+                    totalPages={totalPublicationPages}
+                    isFirstPage={idx === 0}
+                    hideHeroThumbnail={true}
+                    columnMode={columnMode}
+                    columnHeight={page.columnHeight}
+                    sections={page.sections}
+                    sourceDomain={sourceDomain}
+                    isEditable={isEditMode}
+                    selectedElementId={selectedElement?.id}
+                    onSelectElement={setSelectedElement}
+                    onUpdateTitle={handleUpdateTitle}
+                    onUpdateAuthor={handleUpdateAuthor}
+                    onUpdateSummary={handleUpdateSummary}
+                    onUpdateSection={handleUpdateSection}
+                    onUpdateHeroImage={handleUpdateHeroImage}
+                    onDropImageOnFigure={handleDropImageOnFigure}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Confirmation Modal for Page Deletion */}
+      {/* Delete Page Confirmation Modal */}
       <DeletePageModal
         isOpen={isDeleteModalOpen}
-        pageNumber={pageToDelete || 1}
-        totalPages={totalPages}
+        pageNumber={pageToDelete}
+        totalPages={totalPublicationPages}
         onConfirm={handleConfirmDeletePage}
         onCancel={() => {
           setIsDeleteModalOpen(false);
@@ -583,67 +603,6 @@ export function MagazineEditor({
       />
     </div>
   );
-}
-
-/**
- * Offscreen element rendering for height measurement.
- */
-function RenderMeasurementItem({ section, onImageLoad }) {
-  if (!section) return null;
-
-  switch (section.type) {
-    case 'heading': {
-      const HeadingTag = `h${section.level || 2}`;
-      return (
-        <HeadingTag
-          className={`magazine-heading magazine-heading--h${section.level || 2}`}
-        >
-          {section.content}
-        </HeadingTag>
-      );
-    }
-    case 'paragraph': {
-      return <p className="magazine-paragraph">{section.content}</p>;
-    }
-    case 'image': {
-      if (!section.src) return null;
-      return (
-        <figure className="magazine-inline-figure">
-          <img
-            src={section.src}
-            alt=""
-            className="magazine-inline-figure__img"
-            onLoad={onImageLoad}
-          />
-          {section.caption && (
-            <figcaption className="magazine-inline-figure__caption">
-              {section.caption}
-            </figcaption>
-          )}
-        </figure>
-      );
-    }
-    case 'quote': {
-      return (
-        <blockquote className="magazine-pull-quote">
-          <p className="magazine-pull-quote__text">{section.content}</p>
-        </blockquote>
-      );
-    }
-    case 'list': {
-      return (
-        <ul className="magazine-list">
-          {section.items?.map((it, i) => (
-            <li key={i} className="magazine-list__item">
-              {it}
-            </li>
-          ))}
-        </ul>
-      );
-    }
-    default:
-      return null;
-  }
 }
 
 export default MagazineEditor;
